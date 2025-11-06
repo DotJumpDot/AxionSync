@@ -1,5 +1,5 @@
-import Header from "@/Components/Header";
 import { Metadata } from "next";
+import HeaderWrapper from "@/Components/HeaderWrapper";
 
 export const metadata: Metadata = {
   title: "AxionSync",
@@ -7,14 +7,13 @@ export const metadata: Metadata = {
   keywords: ["AxionSync", "Next.js", "Application", "Thailand"],
 };
 
-function layout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html>
+    <html lang="en">
       <body>
-        <Header></Header>
+        <HeaderWrapper /> {/* ✅ ตัวนี้จะตัดสินใจเองว่าจะโชว์ Header หรือไม่ */}
         {children}
       </body>
     </html>
   );
 }
-export default layout;

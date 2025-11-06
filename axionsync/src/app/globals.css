@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+:root {
+  --color-primary: #ff7a00; /* ส้มพาสเทล ส้มเข้มสดใส ใช้กับปุ่ม / โลโก้ / icon */
+  --color-secondary: #2c2c2c; /* ส้มอ่อน เทาเข้มสำหรับพื้นหลัง header */
+  --color-accent: #ffd580; /* ส้มเข้ม ส้มพาสเทลนุ่ม ๆ ใช้กับ hover หรือเน้นข้อความ */
+  --color-text: #333333; /* สีตัวหนังสือ สีตัวอักษรอ่านง่าย */
+  --color-bg: #fff7f0; /* สีพื้นหลัง พื้นหลังขาวอมส้ม ดูอบอุ่น  */
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: "Segoe UI", sans-serif;
+}
