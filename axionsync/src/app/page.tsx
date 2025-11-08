@@ -1,6 +1,15 @@
 "use client";
 
+import LoginDialogue from "@/Components/LoginDialogue";
+import { useState } from "react";
+
 function Page() {
+  const [showLogin, setShowLogin] = useState(false);
+
+  const toggleLogin = () => {
+    setShowLogin(!showLogin);
+  };
+
   return (
     <div style={{ position: "relative", height: "100vh", overflow: "hidden" }}>
       {/* Header */}
@@ -91,6 +100,7 @@ function Page() {
           </p>
 
           <button
+            onClick={toggleLogin}
             style={{
               padding: "12px 32px",
               border: "2px solid #fff",
@@ -113,6 +123,8 @@ function Page() {
           </button>
         </div>
       </div>
+
+      {showLogin && <LoginDialogue toggleLogin={toggleLogin} />}
     </div>
   );
 }

@@ -35,14 +35,14 @@
 
 ## 🧩 Tech Stack
 
-| Layer                | Technology                                         |
-| -------------------- | -------------------------------------------------- |
-| **Frontend**         | Next.js 14 (App Router) + TypeScript + TailwindCSS |
-| **State Management** | Zustand / Context API                              |
-| **Database**         | Supabase / Firebase                                |
-| **Auth**             | NextAuth.js                                        |
-| **Build Tool**       | Turbopack                                          |
-| **Deployment**       | Vercel                                             |
+| Layer          | Technology                                         |
+| -------------- | -------------------------------------------------- |
+| **Frontend**   | Next.js 14 (App Router) + TypeScript + TailwindCSS |
+| **Backend**    | FastAPI                                            |
+| **Database**   | PostgreSQL                                         |
+| **Auth**       | JWT bearer toke                                    |
+| **Build Tool** | Turbopack                                          |
+| **Deployment** | Docker                                             |
 
 ---
 
