@@ -55,6 +55,7 @@ next-env.d.ts
 /.ruff_cache/
 /.cache
 /secrets.json
+venv/
 
 
 # ------------------------------

@@ -3,12 +3,15 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from services.user_service import UserService
 
 from database.conn import Database
+from models.login_request import LoginRequest
 
 import uvicorn
 
 app = FastAPI()
+user_service = UserService()
 
 db_con = Database() 
 
@@ -26,7 +29,15 @@ def read_root():
 
 @app.get("/users")
 def get_users():
-    return db_con.fetch_users()
+    return user_service.get_users()
+
+@app.get("/users/{user_id}")
+def get_user_by_id(user_id: int):
+    return user_service.get_user_by_id(user_id)
+
+@app.post("/login")
+def login_user(data: LoginRequest):
+    return user_service.login(data.username, data.password)
 
 
 

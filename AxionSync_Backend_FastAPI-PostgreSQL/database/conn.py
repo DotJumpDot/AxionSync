@@ -36,23 +36,3 @@ class Database:
             self.connection.close()
             print("Database connection closed")
             
-    def fetch_users(self):
-        try:
-            self.cursor.execute("SELECT id, username, firstname, lastname, nickname, role, tel FROM users;")
-            rows = self.cursor.fetchall()
-            # แปลงเป็น list ของ dict เพื่อให้ FastAPI return JSON ได้ง่าย
-            users = []
-            for row in rows:
-                users.append({
-                    "id": row[0],
-                    "username": row[1],
-                    "firstname": row[2],
-                    "lastname": row[3],
-                    "nickname": row[4],
-                    "role": row[5],
-                    "tel": row[6]
-                })
-            return users
-        except Exception as e:
-            print(f"Error fetching users: {e}")
-            return []
