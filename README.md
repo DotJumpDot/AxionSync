@@ -40,7 +40,7 @@
 | **Frontend**   | Next.js 14 (App Router) + TypeScript + TailwindCSS |
 | **Backend**    | FastAPI                                            |
 | **Database**   | PostgreSQL                                         |
-| **Auth**       | JWT bearer toke                                    |
+| **Auth**       | JWT bearer token                                   |
 | **Build Tool** | Turbopack                                          |
 | **Deployment** | Docker                                             |
 
