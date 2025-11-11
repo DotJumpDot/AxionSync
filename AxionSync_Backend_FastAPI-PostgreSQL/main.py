@@ -1,6 +1,11 @@
 # fastapi dev main.py
 # uvicorn main:app --reload
 
+# python -m venv venv
+# venv\Scripts\activate
+# pip install fastapi uvicorn
+# deactivate
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from services.user_service import UserService

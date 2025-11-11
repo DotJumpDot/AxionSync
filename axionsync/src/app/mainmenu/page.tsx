@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useUserStore } from "@/Store/user";
+import LogoutBtn from "@/Components/LogoutBtn";
 
 export default function MainmenuPage() {
   const { users, getUsers } = useUserStore();
@@ -13,6 +14,7 @@ export default function MainmenuPage() {
   return (
     <div>
       <h1>Main Menu - Users</h1>
+      <LogoutBtn></LogoutBtn>
 
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
@@ -62,6 +64,7 @@ export default function MainmenuPage() {
           ))}
         </tbody>
       </table>
+      
     </div>
   );
 }

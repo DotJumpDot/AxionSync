@@ -1,26 +1,43 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuthStore } from "@/Store/auth"; // ✅ import store
+import type { LoginRequest } from "@/Types/Auth";
+
+import { useRouter } from "next/navigation";
 
 function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [visible, setVisible] = useState(false); // สำหรับ animation
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("1234");
+  const [visible, setVisible] = useState(false);
+
+  const router = useRouter();
+  const { login, loading, error, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    // เปิด animation
-    const timeout = setTimeout(() => {
-      setVisible(true); // เปลี่ยนจาก false → true เพื่อ trigger transition
-    }, 0); // หรือใส่เป็น 50-100ms เพื่อ delay เล็กน้อย
+    const timeout = setTimeout(() => setVisible(true), 0);
     return () => clearTimeout(timeout);
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      const timeout = setTimeout(() => {
+        toggleLogin();
+        router.push("/mainmenu");
+      }, 150);
+      return () => clearTimeout(timeout);
+    }
+  }, [isAuthenticated, toggleLogin, router]);
+
+
   const handleClose = () => {
     setVisible(false);
-    // รอ animation ก่อนค่อยปิดจริง
-    setTimeout(() => {
-      toggleLogin();
-    }, 100);
+    setTimeout(() => toggleLogin(), 150);
+  };
+
+  const handleLogin = async () => {
+    const data: LoginRequest = { username, password };
+    await login(data);
   };
 
   return (
@@ -37,10 +54,10 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
         alignItems: "center",
         zIndex: 1000,
       }}
-      onClick={handleClose} // กดตรง background ปิด
+      onClick={handleClose}
     >
       <div
-        onClick={(e) => e.stopPropagation()} // กันไม่ให้ปิดเมื่อคลิกในกล่อง
+        onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: "white",
           borderRadius: "10px",
@@ -64,17 +81,7 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
         </h2>
 
         <div style={{ marginBottom: "15px" }}>
-          <label
-            htmlFor="username"
-            style={{
-              display: "block",
-              marginBottom: "6px",
-              color: "#333",
-              fontSize: "0.9rem",
-            }}
-          >
-            Username
-          </label>
+          <label htmlFor="username">Username</label>
           <input
             id="username"
             type="text"
@@ -85,24 +92,13 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
               padding: "10px",
               borderRadius: "6px",
               border: "1px solid #ccc",
-              outline: "none",
               fontSize: "1rem",
             }}
           />
         </div>
 
         <div style={{ marginBottom: "20px" }}>
-          <label
-            htmlFor="password"
-            style={{
-              display: "block",
-              marginBottom: "6px",
-              color: "#333",
-              fontSize: "0.9rem",
-            }}
-          >
-            Password
-          </label>
+          <label htmlFor="password">Password</label>
           <input
             id="password"
             type="password"
@@ -113,45 +109,43 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
               padding: "10px",
               borderRadius: "6px",
               border: "1px solid #ccc",
-              outline: "none",
               fontSize: "1rem",
             }}
           />
         </div>
 
-        {/* ปุ่มคู่ Cancel / Login */}
+        {/* ✅ แสดง error จาก store */}
+        {error && (
+          <p style={{ color: "red", textAlign: "center", marginBottom: "10px" }}>
+            {error}
+          </p>
+        )}
+
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             gap: "10px",
-            marginBottom: "10px",
           }}
         >
           <button
             onClick={handleClose}
+            disabled={loading}
             style={{
               flex: 1,
               padding: "10px",
               borderRadius: "6px",
               border: "1px solid #ccc",
               backgroundColor: "#f5f5f5",
-              color: "#333",
               cursor: "pointer",
-              fontWeight: "600",
-              transition: "0.2s",
             }}
-            onMouseOver={(e) =>
-              (e.currentTarget.style.backgroundColor = "#e0e0e0")
-            }
-            onMouseOut={(e) =>
-              (e.currentTarget.style.backgroundColor = "#f5f5f5")
-            }
           >
             Cancel
           </button>
 
           <button
+            onClick={handleLogin}
+            disabled={loading}
             style={{
               flex: 1,
               padding: "10px",
@@ -160,19 +154,16 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
               backgroundColor: "var(--color-primary)",
               color: "white",
               cursor: "pointer",
-              fontWeight: "600",
-              transition: "0.2s",
+              opacity: loading ? 0.7 : 1,
             }}
-            onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
-            onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </div>
 
-        {/* ปุ่ม Register เต็มความกว้าง */}
         <button
           style={{
+            marginTop: "15px",
             width: "100%",
             padding: "10px",
             borderRadius: "6px",
@@ -180,19 +171,12 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
             backgroundColor: "transparent",
             color: "var(--color-primary)",
             cursor: "pointer",
-            fontWeight: "600",
-            transition: "0.2s",
           }}
-          onMouseOver={(e) =>
-            (e.currentTarget.style.backgroundColor = "rgba(255, 165, 0, 0.1)")
-          }
-          onMouseOut={(e) =>
-            (e.currentTarget.style.backgroundColor = "transparent")
-          }
         >
           Register
         </button>
       </div>
+
     </div>
   );
 }
