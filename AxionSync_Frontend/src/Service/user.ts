@@ -6,7 +6,7 @@ function getUser(id: number) {
 }
 
 function getUsers() {
-  return http.get<User[]>("/users"); // <User[]> สำหรับ array
+  return http.get<User[]>("/users/users"); // <User[]> สำหรับ array
 }
 
 export default { getUser, getUsers };

@@ -35,12 +35,16 @@ next-env.d.ts
 # 🐍 Python / FastAPI
 # ------------------------------
 /__pycache__/
+/__pycache__/
+__pycache__/
+*.pyc
 /*.py[cod]
 *$py.class
 /.pytest_cache/
 /.venv/
 /venv/
 /env/
+env/
 /env.bak/
 /pip-wheel-metadata/
 /*.egg-info/
