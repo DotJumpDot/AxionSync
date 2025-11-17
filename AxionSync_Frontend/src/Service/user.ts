@@ -9,4 +9,6 @@ function getUsers() {
   return http.get<User[]>("/users/users"); // <User[]> สำหรับ array
 }
 
-export default { getUser, getUsers };
+const UserService = { getUser, getUsers };
+
+export default UserService;

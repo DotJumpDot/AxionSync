@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const instance = axios.create({
-  baseURL: "http://localhost:8000", // URL ของ FastAPI
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_BASE_URL,
 });
 
 export default instance;

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.database.connect import Database
 from src.api.api_user import router as api_user
-from src.api.api_login import router as api_login
+from src.api.api_auth import router as api_auth
 
 from dotenv import load_dotenv
 import os
@@ -25,7 +25,7 @@ app.add_middleware(
 
 ################################ ตัวจัดการ API Router ################################
 app.include_router(api_user)
-app.include_router(api_login)
+app.include_router(api_auth)
 
 
 ####################################################################################

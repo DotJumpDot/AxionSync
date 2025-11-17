@@ -5,10 +5,10 @@ import type { User } from "@/Types/User";
 import type { LoginRequest, LoginResponse } from "@/Types/Auth";
 
 type AuthStore = {
-  user: User | null;                 // ข้อมูลผู้ใช้ที่ล็อกอินอยู่
-  isAuthenticated: boolean;          // สถานะล็อกอิน
-  loading: boolean;                  // สถานะโหลดระหว่างล็อกอิน
-  error: string | null;              // ข้อผิดพลาดถ้ามี
+  user: User | null; // ข้อมูลผู้ใช้ที่ล็อกอินอยู่
+  isAuthenticated: boolean; // สถานะล็อกอิน
+  loading: boolean; // สถานะโหลดระหว่างล็อกอิน
+  error: string | null; // ข้อผิดพลาดถ้ามี
   login: (data: LoginRequest) => Promise<void>;
   logout: () => void;
 };

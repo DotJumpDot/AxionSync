@@ -1,9 +1,12 @@
 import http from "./http";
 import type { LoginRequest, LoginResponse } from "@/Types/Auth";
 
-// ✅ Login service
+// Login service
 function login(data: LoginRequest) {
-  return http.post<LoginResponse>("/login", data);
+  console.log("Logging in with data:", data);
+  return http.post<LoginResponse>("/auth/login", data);
 }
 
-export default { login };
+const AuthService = { login };
+
+export default AuthService;
