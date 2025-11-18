@@ -1,14 +1,14 @@
-from src.sql_query.sql_login import SQLLogin
+from src.sql_query.sql_auth import SQLAuth
 
 from src.models.entity.en_user import User
 
 
-class LoginService:
+class AuthService:
     def __init__(self):
-        self.sqlLogin = SQLLogin()
+        self.sqlAuth = SQLAuth()
 
     def login(self, username: str, password: str):
-        row = self.sqlLogin.login(username, password)
+        row = self.sqlAuth.login(username, password)
         if not row:
             return None
 

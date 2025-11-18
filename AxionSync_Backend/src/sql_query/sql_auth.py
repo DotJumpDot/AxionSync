@@ -1,7 +1,7 @@
 from src.database.connect import Database
 
 
-class SQLLogin:
+class SQLAuth:
     def __init__(self):
         self.db = Database()
 

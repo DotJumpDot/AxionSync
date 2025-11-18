@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body
 from src.models.entity.en_user import User
-from src.models.function.ft_login import LoginRequest
+from src.models.function.ft_auth import LoginRequest
 from src.services.sv_user import UserService
 
 router = APIRouter(prefix="/users", tags=["Users"])

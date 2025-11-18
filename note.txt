@@ -2,6 +2,9 @@
 # fastapi dev main.py
 # uvicorn main:app --reload --port 8000
 
+# next dev -p 3002
+# npm run dev -- -p 3002
+
 
 ---------------------For venv & pip-----------------------
 python -m venv venv
