@@ -87,7 +87,7 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
       return;
     }
 
-    showNotice(result.message || "Invalid username or password.", "error");
+    showNotice("Invalid username or password.", "error");
   };
 
   return (

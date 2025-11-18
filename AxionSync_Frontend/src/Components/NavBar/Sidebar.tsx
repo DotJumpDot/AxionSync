@@ -7,26 +7,40 @@ import {
   IconActivity,
   IconLogout,
   IconChevronRight,
+  IconClock,
 } from "@tabler/icons-react";
 import { Box, NavLink, Divider } from "@mantine/core";
+import { useAuthStore } from "@/Store/auth";
 
 const HEADER_HEIGHT = 83;
 
+const authStore = useAuthStore.getState();
+
 const data = [
-  { icon: IconGauge, label: "Dashboard", description: "Item with description" },
+  {
+    icon: IconGauge,
+    label: "Dashboard",
+    description: "",
+    rightSection: <IconChevronRight size={16} stroke={1.5} />,
+  },
   {
     icon: IconFingerprint,
     label: "Security",
+    description: "",
     rightSection: <IconChevronRight size={16} stroke={1.5} />,
   },
-  { icon: IconActivity, label: "Activity" },
+  {
+    icon: IconActivity,
+    label: "Activity",
+    description: "",
+    rightSection: <IconChevronRight size={16} stroke={1.5} />,
+  },
 ];
 
 export default function Sidebar() {
   const [active, setActive] = useState(0);
   const [dateTime, setDateTime] = useState("");
 
-  // ⏱ Real-time clock
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
@@ -36,10 +50,8 @@ export default function Sidebar() {
     return () => clearInterval(timer);
   }, []);
 
-  // 🔐 logout ฟังก์ชันง่าย ๆ
   const handleLogout = () => {
-    // localStorage.removeItem("access_token");
-    // localStorage.removeItem("user");
+    authStore.logout();
     window.location.href = "/";
   };
 
@@ -62,12 +74,17 @@ export default function Sidebar() {
       <div
         style={{
           padding: "15px 12px",
-          fontSize: "0.9rem",
+          fontSize: "1.3rem",
           fontWeight: 500,
           backgroundColor: "#f3f3f3",
           height: "10vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "8px",
         }}
       >
+        <IconClock size={35} stroke={2} />
         {dateTime}
       </div>
 
@@ -75,46 +92,51 @@ export default function Sidebar() {
 
       {/* เมนูหลัก */}
       <div style={{ padding: "0px", flex: 1 }}>
-        {data.map((item, index) => (
-          <NavLink
-            key={item.label}
-            active={index === active}
-            label={item.label}
-            description={item.description}
-            rightSection={item.rightSection}
-            leftSection={<item.icon size={26} stroke={1.5} />}
-            onClick={() => setActive(index)}
-            color="orange"
-            styles={{
-              root: {
-                height: 80,
-                borderRadius: 10,
-                marginBottom: 0,
-                paddingLeft: 16,
-                paddingRight: 16,
-                transition: "0.2s",
-                cursor: "pointer",
-                "&:hover": {
-                  backgroundColor: "var(--mantine-color-orange-light)",
-                  color: "var(--mantine-color-orange-9)",
+        {data.map((item, index) => {
+          const isActive = index === active;
+
+          return (
+            <NavLink
+              key={item.label}
+              active={isActive}
+              label={item.label}
+              description={item.description}
+              leftSection={<item.icon size={26} stroke={1.5} />}
+              rightSection={
+                isActive && item.rightSection ? (
+                  <IconChevronRight size={16} stroke={1.5} />
+                ) : null
+              }
+              onClick={() => setActive(index)}
+              color="orange"
+              styles={{
+                root: {
+                  height: 80,
+                  borderRadius: 0,
+                  marginBottom: 0,
+                  paddingLeft: 16,
+                  paddingRight: 16,
+                  transition: "0.2s",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "var(--mantine-color-orange-light)",
+                    color: "var(--mantine-color-orange-9)",
+                  },
                 },
-              },
-              label: {
-                fontSize: "1rem",
-                fontWeight: 450,
-              },
-              description: {
-                fontSize: "0.9rem",
-              },
-              section: {
-                svg: { width: 26, height: 26, transition: "0.2s" },
-              },
-            }}
-          />
-        ))}
+                label: {
+                  fontSize: "1rem",
+                  fontWeight: 450,
+                },
+                section: {
+                  svg: { width: 26, height: 26, transition: "0.2s" },
+                },
+              }}
+            />
+          );
+        })}
       </div>
 
-      {/* 🔻 ปุ่ม Logout ชิดล่างสุด */}
+      {/* Logout */}
       <div style={{ padding: "0px", marginBottom: "0px" }}>
         <NavLink
           active
@@ -126,23 +148,19 @@ export default function Sidebar() {
           styles={{
             root: {
               height: 80,
-              borderRadius: 10,
+              borderRadius: 0,
               paddingLeft: 16,
               paddingRight: 16,
               transition: "0.2s",
               cursor: "pointer",
-
               "&:hover": {
-                backgroundColor: "red", // hover สีแดงอ่อน
-                color: "red", // ตัวอักษรแดงเข้ม
+                backgroundColor: "#ffe5e5",
+                color: "red",
               },
             },
             label: {
               fontSize: "1rem",
               fontWeight: 450,
-            },
-            section: {
-              svg: { width: 26, height: 26 },
             },
           }}
         />

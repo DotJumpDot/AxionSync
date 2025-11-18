@@ -58,7 +58,16 @@ function Header() {
             {user.firstname} {user.lastname}
           </span>
         ) : (
-          <span style={{ opacity: 0.7 }}>Guest</span>
+          <span
+            style={{
+              fontSize: "1.3rem",
+              fontWeight: 450,
+              paddingRight: "20px",
+              color: "white",
+            }}
+          >
+            Admin Users
+          </span>
         )}
       </div>
     </header>
