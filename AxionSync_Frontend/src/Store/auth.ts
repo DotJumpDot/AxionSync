@@ -9,7 +9,9 @@ type AuthStore = {
   isAuthenticated: boolean; // สถานะล็อกอิน
   loading: boolean; // สถานะโหลดระหว่างล็อกอิน
   error: string | null; // ข้อผิดพลาดถ้ามี
-  login: (data: LoginRequest) => Promise<void>;
+  login: (
+    data: LoginRequest
+  ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 };
 
@@ -21,7 +23,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   // ✅ ฟังก์ชันล็อกอิน
   login: async (data: LoginRequest) => {
-    set({ loading: true, error: null });
+    set({ loading: true });
+
     try {
       const res = await authService.login(data);
       const result: LoginResponse = res.data;
@@ -31,21 +34,19 @@ export const useAuthStore = create<AuthStore>((set) => ({
           user: result.user,
           isAuthenticated: true,
           loading: false,
+          error: null, // clear error
         });
-      } else {
-        set({
-          error: result.message || "Invalid credentials",
-          isAuthenticated: false,
-          loading: false,
-        });
+        return { success: true };
       }
+
+      // ❌ ไม่ต้อง set error ใน store!
+      set({ loading: false });
+      return {
+        success: false,
+      };
     } catch (e) {
-      console.error("Login failed:", e);
-      set({
-        error: "Login failed, please try again.",
-        isAuthenticated: false,
-        loading: false,
-      });
+      set({ loading: false });
+      return { success: false };
     }
   },
 

@@ -1,6 +1,6 @@
 "use client";
 
-import LoginDialogue from "@/Components/LoginDialogue";
+import LoginDialogue from "@/Components/Auth/LoginDialogue";
 import { useState } from "react";
 
 function Page() {

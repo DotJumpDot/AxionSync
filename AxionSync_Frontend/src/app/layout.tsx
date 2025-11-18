@@ -1,5 +1,10 @@
 import { Metadata } from "next";
-import HeaderWrapper from "@/Components/HeaderWrapper";
+import Providers from "./providers";
+import HeaderWrapper from "@/Components/Header/HeaderWrapper";
+import SiderWrapper from "@/Components/NavBar/SiderWrapper";
+import LayoutWrapper from "./LayoutWrapper";
+import "./globals.css";
+
 
 export const metadata: Metadata = {
   title: "AxionSync",
@@ -11,8 +16,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <HeaderWrapper /> {/* ✅ ตัวนี้จะตัดสินใจเองว่าจะโชว์ Header หรือไม่ */}
-        {children}
+        <Providers>
+          <HeaderWrapper />
+          <SiderWrapper />
+          <LayoutWrapper>{children}</LayoutWrapper>
+          <div id="notification-root"></div>
+        </Providers>
       </body>
     </html>
   );

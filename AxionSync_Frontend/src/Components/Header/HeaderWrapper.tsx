@@ -1,6 +1,6 @@
 "use client";
 
-import Header from "@/Components/Header";
+import Header from "@/Components/Header/Header";
 import { usePathname } from "next/navigation";
 
 export default function HeaderWrapper() {

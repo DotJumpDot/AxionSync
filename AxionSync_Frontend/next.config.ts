@@ -7,6 +7,7 @@ dotenv.config({ path: resolve(__dirname, "../.env") });
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  transpilePackages: ["antd"],
 
   // inject env เข้า process.env ของ Next.js
   env: {

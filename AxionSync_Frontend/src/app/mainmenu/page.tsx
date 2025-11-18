@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import { useUserStore } from "@/Store/user";
-import LogoutBtn from "@/Components/LogoutBtn";
+import LogoutBtn from "@/Components/Auth/LogoutBtn";
 
 export default function MainmenuPage() {
-  const { users, getUsers } = useUserStore();
+  const { users, loading, getUsers } = useUserStore();
 
   useEffect(() => {
     getUsers(); // โหลด users ตอน mount
@@ -13,9 +13,13 @@ export default function MainmenuPage() {
 
   return (
     <div>
+      {/* Global Loading */}
+      {loading && (
+        <div className="global-loading">
+          <div className="global-spinner" />
+        </div>
+      )}
       <h1>Main Menu - Users</h1>
-      <LogoutBtn></LogoutBtn>
-
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>
@@ -64,7 +68,6 @@ export default function MainmenuPage() {
           ))}
         </tbody>
       </table>
-      
     </div>
   );
 }
