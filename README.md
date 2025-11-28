@@ -37,7 +37,7 @@
 
 | Layer          | Technology                                         |
 | -------------- | -------------------------------------------------- |
-| **Frontend**   | Next.js 14 (App Router) + TypeScript + TailwindCSS |
+| **Frontend**   | Next.js 16 (App Router) + TypeScript + TailwindCSS |
 | **Backend**    | FastAPI                                            |
 | **Database**   | PostgreSQL                                         |
 | **Auth**       | JWT bearer token                                   |
