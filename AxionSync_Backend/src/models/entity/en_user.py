@@ -1,4 +1,9 @@
 from pydantic import BaseModel
+
+try:
+    from pydantic import ConfigDict  # pydantic v2
+except ImportError:  # fallback pydantic v1
+    ConfigDict = None  # type: ignore
 from datetime import datetime
 
 
@@ -23,8 +28,13 @@ class UserResponse(BaseModel):
     tel: str | None = None
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    # Pydantic v2 config
+    if ConfigDict is not None:
+        model_config = ConfigDict(from_attributes=True)
+    else:
+
+        class Config:  # type: ignore
+            orm_mode = True
 
 
 class UserCreate(BaseModel):

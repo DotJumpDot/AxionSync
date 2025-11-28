@@ -19,3 +19,6 @@ Extension : File Tree Generator
 
 ---------------------Hide __pycache__-----------------------
 File → Preferences → Settings  -> files.exclude -> Add Pattern -> **/__pycache__
+
+---------------------Git-----------------------
+git clone -b <branch-name> --single-branch <repository-url>

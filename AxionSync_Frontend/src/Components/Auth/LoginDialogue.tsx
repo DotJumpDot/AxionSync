@@ -4,21 +4,17 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "@/Store/auth";
 import type { LoginRequest } from "@/Types/Auth";
 import { validateLoginRequest } from "@/validate/V_Auth";
-
 import { useRouter } from "next/navigation";
-import { Notice } from "../Notification/NotificationBox";
-import NotificationPortal from "../Notification/NotificationPortal";
-import NotificationList from "../Notification/NotificationList";
+import { useNotification } from "@/Components/Notification/useNotification";
 
 function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
+  const { showNotification } = useNotification();
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("1234");
   const [visible, setVisible] = useState(false);
 
   const router = useRouter();
-  const { login, loading, error, isAuthenticated } = useAuthStore();
-
-  const [notices, setNotices] = useState<Notice[]>([]);
+  const { login, loading, error, token, tokenExpiresAt } = useAuthStore();
 
   // const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -30,7 +26,8 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
 
   // Auto redirect on login success
   useEffect(() => {
-    if (isAuthenticated) {
+    const valid = !!token && !!tokenExpiresAt && Date.now() < tokenExpiresAt;
+    if (valid) {
       const timeout = setTimeout(() => {
         toggleLogin();
         router.push("/mainmenu");
@@ -38,7 +35,7 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
       return () => clearTimeout(timeout);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  }, [token, tokenExpiresAt]);
 
   const handleClose = () => {
     setVisible(false);
@@ -46,26 +43,13 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
   };
 
   // ===========================
-  //       NOTIFICATION
+  //       NOTIFICATION (AntD)
   // ===========================
-  const showNotice = (msg: string, type: Notice["type"]) => {
-    const id = crypto.randomUUID();
-    const item: Notice = { id, message: msg, type };
-
-    setNotices((prev) => [item, ...prev]); // new one on top
-
-    setTimeout(() => removeNotice(id), 3500);
-  };
-
-  const removeNotice = (id: string) => {
-    setNotices((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, leaving: true } : n))
-    );
-
-    // ลบจริงหลัง animation ~300ms
-    setTimeout(() => {
-      setNotices((prev) => prev.filter((n) => n.id !== id));
-    }, 300);
+  const showNotice = (
+    msg: string,
+    type: "success" | "error" | "info" | "warning"
+  ) => {
+    showNotification(msg, type);
   };
 
   // ===========================
@@ -98,11 +82,6 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
           <div className="global-spinner" />
         </div>
       )}
-
-      {/* Notification System */}
-      <NotificationPortal>
-        <NotificationList notices={notices} remove={removeNotice} />
-      </NotificationPortal>
 
       {/* Login Dialog */}
       <div

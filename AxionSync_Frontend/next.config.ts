@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   // inject env เข้า process.env ของ Next.js
   env: {
     NEXT_PUBLIC_BACKEND_BASE_URL: process.env.BACKEND_BASE_URL,
+    NEXT_PUBLIC_X_API_KEY: process.env.X_API_KEY,
   },
 };
 

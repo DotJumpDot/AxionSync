@@ -4,7 +4,7 @@ import HeaderWrapper from "@/Components/Header/HeaderWrapper";
 import SiderWrapper from "@/Components/NavBar/SiderWrapper";
 import LayoutWrapper from "./LayoutWrapper";
 import "./globals.css";
-
+import "antd/dist/reset.css";
 
 export const metadata: Metadata = {
   title: "AxionSync",

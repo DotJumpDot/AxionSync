@@ -2,14 +2,15 @@
 
 import { useEffect } from "react";
 import { useUserStore } from "@/Store/user";
-import LogoutBtn from "@/Components/Auth/LogoutBtn";
+import { useRouter } from "next/navigation";
 
 export default function MainmenuPage() {
   const { users, loading, getUsers } = useUserStore();
+  const router = useRouter();
 
   useEffect(() => {
     getUsers(); // โหลด users ตอน mount
-  }, []);
+  }, [getUsers]);
 
   return (
     <div>

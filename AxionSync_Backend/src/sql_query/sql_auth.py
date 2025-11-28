@@ -15,3 +15,17 @@ class SQLAuth:
             (username, password),
         )
         return self.db.cursor.fetchone()
+
+    def get_user_with_password(self, username: str):
+        """Fetch user and password hash for verification in service layer.
+        Returns a tuple ordered to match AuthService expectations.
+        """
+        self.db.cursor.execute(
+            """
+            SELECT id, username, firstname, lastname, nickname, role, tel, created_at, password
+            FROM users
+            WHERE username = %s;
+        """,
+            (username,),
+        )
+        return self.db.cursor.fetchone()

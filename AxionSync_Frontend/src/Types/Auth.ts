@@ -9,4 +9,7 @@ export interface LoginResponse {
   success: boolean;
   message?: string;
   user?: User;
+  token?: string;
+  // ISO string when the token expires (from backend)
+  expiresAt?: string;
 }
