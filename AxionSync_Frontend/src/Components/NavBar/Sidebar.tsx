@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   IconGauge,
   IconFingerprint,
@@ -12,32 +13,30 @@ import {
 import { Box, NavLink, Divider } from "@mantine/core";
 import { useAuthStore } from "@/Store/auth";
 
-const HEADER_HEIGHT = 83;
-
-const authStore = useAuthStore.getState();
-
 const data = [
   {
     icon: IconGauge,
-    label: "Dashboard",
+    label: "Main Menu",
     description: "",
     rightSection: <IconChevronRight size={16} stroke={1.5} />,
   },
   {
     icon: IconFingerprint,
-    label: "Security",
+    label: "Todo",
     description: "",
     rightSection: <IconChevronRight size={16} stroke={1.5} />,
   },
   {
     icon: IconActivity,
-    label: "Activity",
+    label: "Memo",
     description: "",
     rightSection: <IconChevronRight size={16} stroke={1.5} />,
   },
 ];
 
 export default function Sidebar() {
+  const router = useRouter();
+  const { logout } = useAuthStore();
   const [active, setActive] = useState(0);
   const [dateTime, setDateTime] = useState("");
 
@@ -51,7 +50,7 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = () => {
-    authStore.logout();
+    logout();
     window.location.href = "/";
   };
 
@@ -59,10 +58,10 @@ export default function Sidebar() {
     <Box
       style={{
         position: "fixed",
-        top: HEADER_HEIGHT,
+        top: 0,
         left: 0,
         width: "280px",
-        height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+        height: "100vh",
         backgroundColor: "#f3f3f3",
         boxShadow: "2px 0 6px rgba(0,0,0,0.1)",
         zIndex: 2000,
@@ -70,7 +69,42 @@ export default function Sidebar() {
         flexDirection: "column",
       }}
     >
-      {/* เวลา-วันที่ */}
+      {/* Logo and Branding */}
+      <div
+        style={{
+          padding: "15px 12px",
+          paddingLeft: "25px",
+          height: "83px",
+          display: "flex",
+          justifyContent: "left",
+          alignItems: "center",
+          gap: "10px",
+          backgroundColor: "rgba(0, 0, 0, 0.3)",
+          backdropFilter: "blur(6px)",
+          borderBottom: "1px solid rgba(0,0,0,0.1)",
+        }}
+      >
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            backgroundColor: "var(--color-primary)",
+            borderRadius: "50%",
+          }}
+        ></div>
+        <h1
+          style={{
+            fontSize: "1.2rem",
+            margin: 0,
+            fontWeight: 600,
+            color: "white",
+          }}
+        >
+          AxionSync
+        </h1>
+      </div>
+
+      {/* DateTime */}
       <div
         style={{
           padding: "15px 12px",
@@ -79,18 +113,27 @@ export default function Sidebar() {
           backgroundColor: "#f3f3f3",
           height: "10vh",
           display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
           gap: "8px",
         }}
       >
         <IconClock size={35} stroke={2} />
-        {dateTime}
+        <div
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            minWidth: "180px",
+            textAlign: "center",
+          }}
+        >
+          {dateTime}
+        </div>
       </div>
 
       <Divider />
 
-      {/* เมนูหลัก */}
+      {/* Menu Items */}
       <div style={{ padding: "0px", flex: 1 }}>
         {data.map((item, index) => {
           const isActive = index === active;
@@ -107,7 +150,11 @@ export default function Sidebar() {
                   <IconChevronRight size={16} stroke={1.5} />
                 ) : null
               }
-              onClick={() => setActive(index)}
+              onClick={() => {
+                setActive(index);
+                if (item.label === "Main Menu") router.push("/mainmenu");
+                if (item.label === "Memo") router.push("/memo");
+              }}
               color="orange"
               styles={{
                 root: {

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, status, Depends
 from src.models.entity.en_user import User
 from src.models.function.ft_auth import LoginRequest
 from src.services.sv_auth import AuthService
@@ -7,11 +7,15 @@ from jwcrypto import jwt, jwk
 import base64
 import os
 import ast
+import json
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 sv_auth = AuthService()
 
 
+# ===========================
+#    JWT HELPER FUNCTIONS
+# ===========================
 def _parse_api_keys(raw: str | None):
     if not raw:
         return []
@@ -32,6 +36,41 @@ def _parse_api_keys(raw: str | None):
 def _jwt_secret_from_keys(keys: list[str]) -> str:
     # Use the first API key as the signing secret by request
     return keys[0] if keys else "default-dev-secret-change-me"
+
+
+def _jwt_key():
+    """Get JWT key for token signing/verification"""
+    keys = _parse_api_keys(os.getenv("X_API_KEY"))
+    secret = (keys[0] if keys else "default-dev-secret-change-me").encode()
+    k_b64u = base64.urlsafe_b64encode(secret).rstrip(b"=")
+    return jwk.JWK(kty="oct", k=k_b64u.decode())
+
+
+def require_bearer(
+    authorization: str | None = Header(default=None, alias="Authorization")
+):
+    """Dependency to extract and verify JWT, return claims with user info"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header",
+        )
+    token_str = authorization[7:]
+    try:
+        key = _jwt_key()
+        verified = jwt.JWT(key=key, jwt=token_str)
+        claims = json.loads(verified.claims)
+        if int(claims.get("exp", 0)) <= int(datetime.now(timezone.utc).timestamp()):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
+            )
+        return claims
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
 
 
 @router.post("/login")
