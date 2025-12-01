@@ -9,7 +9,7 @@ class SQLAuth:
         self.db.cursor.execute(
             """
             SELECT id, username, firstname, lastname, nickname, role, tel, created_at
-            FROM users
+            FROM "user"
             WHERE username = %s AND password = %s;
         """,
             (username, password),
@@ -23,7 +23,7 @@ class SQLAuth:
         self.db.cursor.execute(
             """
             SELECT id, username, firstname, lastname, nickname, role, tel, created_at, password
-            FROM users
+            FROM "user"
             WHERE username = %s;
         """,
             (username,),

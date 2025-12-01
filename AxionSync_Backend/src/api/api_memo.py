@@ -14,14 +14,14 @@ sv_memo = MemoService()
 #    API ENDPOINTS
 # ===========================
 @router.get("/", response_model=list[Memo])
-def get_memos(claims: dict = Depends(require_bearer)):
-    """Get all memos for the authenticated user"""
+def get_memos(tab_id: int | None = None, claims: dict = Depends(require_bearer)):
+    """Get all memos for the authenticated user, optionally filtered by tab_id"""
     user_id = claims.get("uid")
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
-    return sv_memo.get_memos(user_id)
+    return sv_memo.get_memos(user_id, tab_id=tab_id)
 
 
 @router.get("/{memo_id}", response_model=Memo | None)
@@ -54,7 +54,9 @@ def create_memo(req: CreateMemoRequest, claims: dict = Depends(require_bearer)):
         created_at=datetime.now(timezone.utc),
     )
 
-    memo = sv_memo.create_memo(req.title, req.content, user_id, user)
+    memo = sv_memo.create_memo(
+        req.title, req.content, user_id, user, req.tab_id, req.font_color
+    )
     if not memo:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -85,7 +87,7 @@ def update_memo(
         created_at=datetime.now(timezone.utc),
     )
 
-    memo = sv_memo.update_memo(memo_id, req.title, req.content, user)
+    memo = sv_memo.update_memo(memo_id, req.title, req.content, user, req.font_color)
     if not memo:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -113,3 +115,61 @@ def delete_memo(memo_id: int, claims: dict = Depends(require_bearer)):
             detail="Failed to delete memo",
         )
     return {"success": True, "message": "Memo deleted"}
+
+
+@router.patch("/{memo_id}/collect", response_model=Memo)
+def collect_memo(memo_id: int, claims: dict = Depends(require_bearer)):
+    """Mark a memo as collected"""
+    user_id = claims.get("uid")
+    username = claims.get("sub")
+
+    # Check ownership
+    existing = sv_memo.get_memo_by_id(memo_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Memo not found")
+    if existing.user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    user = User(
+        id=user_id,
+        username=username,
+        role=claims.get("role", "user"),
+        created_at=datetime.now(timezone.utc),
+    )
+
+    memo = sv_memo.collect_memo(memo_id, user)
+    if not memo:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to collect memo",
+        )
+    return memo
+
+
+@router.patch("/{memo_id}/uncollect", response_model=Memo)
+def uncollect_memo(memo_id: int, claims: dict = Depends(require_bearer)):
+    """Unmark a memo as collected"""
+    user_id = claims.get("uid")
+    username = claims.get("sub")
+
+    # Check ownership
+    existing = sv_memo.get_memo_by_id(memo_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Memo not found")
+    if existing.user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    user = User(
+        id=user_id,
+        username=username,
+        role=claims.get("role", "user"),
+        created_at=datetime.now(timezone.utc),
+    )
+
+    memo = sv_memo.uncollect_memo(memo_id, user)
+    if not memo:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to uncollect memo",
+        )
+    return memo

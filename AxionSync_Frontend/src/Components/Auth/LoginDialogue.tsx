@@ -5,7 +5,7 @@ import { useAuthStore } from "@/Store/auth";
 import type { LoginRequest } from "@/Types/Auth";
 import { validateLoginRequest } from "@/validate/V_Auth";
 import { useRouter } from "next/navigation";
-import { useNotification } from "@/Components/Notification/useNotification";
+import { useNotification } from "@/Functions/Notification/useNotification";
 
 function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
   const { showNotification } = useNotification();

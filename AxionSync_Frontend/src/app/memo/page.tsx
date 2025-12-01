@@ -1,226 +1,369 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryState } from "nuqs";
 import { useMemoStore } from "@/Store/memo";
+import { useTabStore } from "@/Store/tab";
 import { useAuthStore } from "@/Store/auth";
-import { useNotification } from "@/Components/Notification/useNotification";
+import { useNotification } from "@/Functions/Notification/useNotification";
+import MemoHeader from "@/Components/Memo/MemoHeader";
+import MemoItem from "@/Components/Memo/MemoItem";
+import MemoSidebar from "@/Components/Memo/MemoSidebar";
+import TabModal from "@/Components/Memo/TabModal";
 import type { Memo } from "@/Types/Memo";
+import type { CreateTabRequest, UpdateTabRequest } from "@/Types/Tab";
+import {
+  scrollToMemo,
+  scrollToBottom,
+} from "@/Functions/Memo/memo_function_scroll";
+import { filterCollectedMemos } from "@/Functions/Memo/memo_function_filters";
+import {
+  applyColorToAllMemos,
+  shouldShowMemoHeader,
+} from "@/Functions/Memo/memo_function_helpers";
+import {
+  handleMemoDelete,
+  handleMemoCollect,
+  handleMemoUncollect,
+  handleMemoUpdate,
+  handleMemoColorUpdate,
+  handleTabUpdate,
+  handleTabCreate,
+} from "@/Functions/Memo/memo_function_handlers";
 
 export default function MemoPage() {
-  const { memos, loading, getMemos, createMemo, deleteMemo } = useMemoStore();
+  const {
+    memos,
+    loading,
+    getMemos,
+    createMemo,
+    updateMemo,
+    deleteMemo,
+    collectMemo,
+    uncollectMemo,
+  } = useMemoStore();
+  const { tabs, currentTabId, getTabs, setCurrentTab, updateTab, createTab } =
+    useTabStore();
   const { user } = useAuthStore();
-  const { showNotification } = useNotification();
+  const { showNotification: baseShowNotification, modal } = useNotification();
+
+  // Wrap notification to use topLeft placement for memo page
+  const showNotification = (
+    msg: string,
+    type?: "success" | "error" | "info" | "warning",
+    duration?: number
+  ) => {
+    baseShowNotification(msg, type, duration, "topLeft");
+  };
 
   const [input, setInput] = useState("");
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
+  const [panelTab, setPanelTab] = useQueryState("panel", {
+    defaultValue: "details" as "details" | "collected",
+  });
+  const [hoveredMemo, setHoveredMemo] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [editingMemoId, setEditingMemoId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [channelEditing, setChannelEditing] = useState(false);
+  const [channelNameDraft, setChannelNameDraft] = useState("");
+  const [openTabModal, setOpenTabModal] = useState<false | "create" | "edit">(
+    false
+  );
+  const [defaultMemoColor, setDefaultMemoColor] = useState("#dcddde");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+  const currentTab = useMemo(
+    () => tabs.find((t) => t.id === currentTabId) || null,
+    [tabs, currentTabId]
+  );
+  const collectedMemos = useMemo(() => filterCollectedMemos(memos), [memos]);
 
   useEffect(() => {
-    getMemos();
-  }, [getMemos]);
+    getTabs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Auto-scroll to bottom when new memos arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [memos]);
+    if (
+      (currentTabId == null || tabs.every((t) => t.id !== currentTabId)) &&
+      tabs.length > 0
+    ) {
+      setCurrentTab(tabs[0].id);
+    }
+  }, [tabs, currentTabId, setCurrentTab]);
 
-  const handleSend = async () => {
+  useEffect(() => {
+    if (currentTabId != null) {
+      getMemos(currentTabId);
+    }
+  }, [currentTabId, getMemos]);
+
+  useEffect(() => {
+    scrollToBottom(messagesEndRef);
+  }, [memos.length]);
+
+  const handleSend = () => {
     if (!input.trim()) return;
-
-    const result = await createMemo({
+    createMemo({
       title: "Memo",
       content: input.trim(),
+      tab_id: currentTabId ?? undefined,
+      font_color: defaultMemoColor,
+    }).then((result) => {
+      if (result.success) {
+        showNotification("Memo sent!", "success");
+        setInput("");
+        setTimeout(() => scrollToBottom(messagesEndRef), 50);
+      } else {
+        showNotification(result.message || "Failed to send memo", "error");
+      }
+    });
+  };
+
+  const handleDelete = (id: number) =>
+    handleMemoDelete(id, deleteMemo, showNotification, (deletedId: number) => {
+      if (selectedMemo?.id === deletedId) setSelectedMemo(null);
+      setOpenMenuId(null);
     });
 
-    if (result.success) {
-      setInput("");
-      showNotification("Memo sent!", "success");
-    } else {
-      showNotification(result.message || "Failed to send memo", "error");
-    }
-  };
+  const handleCollect = (id: number) =>
+    handleMemoCollect(id, collectMemo, showNotification, () =>
+      setOpenMenuId(null)
+    );
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  const handleUncollect = (id: number) =>
+    handleMemoUncollect(id, uncollectMemo, showNotification, () =>
+      setOpenMenuId(null)
+    );
 
-  const handleDelete = async (id: number) => {
-    const result = await deleteMemo(id);
-    if (result.success) {
-      showNotification("Memo deleted", "success");
-      if (selectedMemo?.id === id) {
-        setSelectedMemo(null);
+  const saveEditMemo = (id: number) =>
+    handleMemoUpdate(
+      id,
+      "Memo",
+      editContent,
+      updateMemo,
+      showNotification,
+      () => {
+        setEditingMemoId(null);
+        setEditContent("");
       }
-    } else {
-      showNotification(result.message || "Failed to delete", "error");
+    );
+
+  const saveChannelName = () => {
+    if (!currentTab || !channelNameDraft.trim()) {
+      setChannelEditing(false);
+      return;
     }
+    handleTabUpdate(
+      currentTab.id,
+      {
+        tab_name: channelNameDraft.trim(),
+        color: currentTab.color,
+        font_name: currentTab.font_name,
+        font_size: currentTab.font_size,
+      },
+      updateTab,
+      showNotification,
+      () => setChannelEditing(false)
+    );
+  };
+
+  const handleSubmitTab = (data: CreateTabRequest | UpdateTabRequest) => {
+    if (openTabModal === "create") {
+      handleTabCreate(
+        data as CreateTabRequest,
+        createTab,
+        showNotification,
+        (tabId: number) => {
+          setCurrentTab(tabId);
+          setOpenTabModal(false);
+        }
+      );
+    } else if (openTabModal === "edit" && currentTab) {
+      handleTabUpdate(
+        currentTab.id,
+        data as UpdateTabRequest,
+        updateTab,
+        showNotification,
+        () => setOpenTabModal(false)
+      );
+    }
+  };
+
+  const handleSetDefaultColor = () => {
+    if (selectedMemo && selectedMemo.font_color) {
+      setDefaultMemoColor(selectedMemo.font_color);
+      showNotification(
+        `Default color set to ${selectedMemo.font_color}`,
+        "success"
+      );
+    }
+  };
+
+  const handleColorApplyAll = () => {
+    if (!selectedMemo) return;
+
+    modal.confirm({
+      title: "Apply Color to All Memos",
+      content: `Are you sure you want to apply the color "${
+        selectedMemo.font_color || "#dcddde"
+      }" to all memos in this tab?`,
+      okText: "Apply",
+      okType: "primary",
+      cancelText: "Cancel",
+      onOk: async () => {
+        const targetColor = selectedMemo.font_color || "#dcddde";
+        await applyColorToAllMemos(
+          memos,
+          targetColor,
+          updateMemo,
+          getMemos,
+          currentTabId,
+          showNotification
+        );
+      },
+    });
   };
 
   return (
     <div
-      style={{ display: "flex", height: "100vh", backgroundColor: "#36393f" }}
+      style={{
+        display: "flex",
+        height: "100vh",
+        backgroundColor: "#36393f",
+        fontFamily: currentTab?.font_name || "inherit",
+        fontSize: currentTab?.font_size || 15,
+      }}
+      onClick={() => setOpenMenuId(null)}
     >
-      {/* Main Chat Area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
-        <div
-          style={{
-            height: "50px",
-            backgroundColor: "#2f3136",
-            borderBottom: "1px solid #202225",
-            display: "flex",
-            alignItems: "center",
-            padding: "0 16px",
-            color: "#fff",
-            fontSize: "16px",
-            fontWeight: "600",
+        <MemoHeader
+          currentTab={currentTab}
+          tabs={tabs}
+          currentTabId={currentTabId}
+          channelEditing={channelEditing}
+          channelNameDraft={channelNameDraft}
+          onChannelNameChange={setChannelNameDraft}
+          onChannelNameSave={saveChannelName}
+          onChannelEditStart={() => {
+            if (currentTab) {
+              setChannelNameDraft(currentTab.tab_name);
+              setChannelEditing(true);
+            }
           }}
-        >
-          # memo-notes
-        </div>
+          onChannelEditCancel={() => setChannelEditing(false)}
+          onTabChange={setCurrentTab}
+          onEditTab={() => setOpenTabModal("edit")}
+          onCreateTab={() => setOpenTabModal("create")}
+        />
 
-        {/* Messages Area */}
         <div
           style={{
             flex: 1,
             overflowY: "auto",
             padding: "16px",
             display: "flex",
-            flexDirection: "column-reverse",
+            flexDirection: "column",
+            justifyContent: "flex-end",
           }}
         >
-          <div ref={messagesEndRef} />
-          {[...memos].reverse().map((memo) => (
+          {memos.map((memo, index) => (
             <div
               key={memo.id}
+              ref={(el) => {
+                messageRefs.current[memo.id] = el;
+              }}
               style={{
-                marginBottom: "16px",
-                padding: "8px 12px",
-                borderRadius: "4px",
-                backgroundColor:
-                  selectedMemo?.id === memo.id ? "#40444b" : "transparent",
-                cursor: "pointer",
-                transition: "background-color 0.2s",
-              }}
-              onClick={() => setSelectedMemo(memo)}
-              onMouseEnter={(e) => {
-                if (selectedMemo?.id !== memo.id) {
-                  e.currentTarget.style.backgroundColor = "#32353b";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedMemo?.id !== memo.id) {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }
+                marginTop: shouldShowMemoHeader(memo, index, memos) ? 16 : 0,
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: "4px",
+              <MemoItem
+                memo={memo}
+                isSelected={selectedMemo?.id === memo.id}
+                isHovered={hoveredMemo === memo.id}
+                isEditing={editingMemoId === memo.id}
+                editContent={editContent}
+                openMenuId={openMenuId}
+                currentTab={currentTab}
+                currentUserId={user?.id}
+                showHeader={shouldShowMemoHeader(memo, index, memos)}
+                onSelect={() => setSelectedMemo(memo)}
+                onHoverChange={(hovered) => {
+                  if (hovered) setHoveredMemo(memo.id);
+                  else if (openMenuId !== memo.id) setHoveredMemo(null);
                 }}
-              >
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    backgroundColor: "#5865f2",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#fff",
-                    fontWeight: "600",
-                    marginRight: "12px",
-                  }}
-                >
-                  {memo.user.username.charAt(0).toUpperCase()}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "baseline",
-                      gap: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: "#fff",
-                        fontWeight: "500",
-                        fontSize: "16px",
-                      }}
-                    >
-                      {memo.user.username}
-                    </span>
-                    <span style={{ color: "#72767d", fontSize: "12px" }}>
-                      {new Date(memo.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      color: "#dcddde",
-                      fontSize: "15px",
-                      marginTop: "4px",
-                    }}
-                  >
-                    {memo.content}
-                  </div>
-                </div>
-              </div>
+                onEditChange={setEditContent}
+                onEditSave={() => saveEditMemo(memo.id)}
+                onEditCancel={() => {
+                  setEditingMemoId(null);
+                  setEditContent("");
+                }}
+                onMenuToggle={() =>
+                  setOpenMenuId(openMenuId === memo.id ? null : memo.id)
+                }
+                onEdit={() => {
+                  setEditingMemoId(memo.id);
+                  setEditContent(memo.content);
+                  setOpenMenuId(null);
+                }}
+                onCollect={
+                  !memo.collected ? () => handleCollect(memo.id) : undefined
+                }
+                onUncollect={
+                  memo.collected ? () => handleUncollect(memo.id) : undefined
+                }
+                onDelete={() => handleDelete(memo.id)}
+                onMenuClose={() => setOpenMenuId(null)}
+              />
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Bar */}
         <div
           style={{
-            padding: "16px",
+            padding: 16,
+            borderTop: "1px solid #202225",
             backgroundColor: "#2f3136",
           }}
         >
-          <div
-            style={{
-              backgroundColor: "#40444b",
-              borderRadius: "8px",
-              padding: "12px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
+          <div style={{ display: "flex", gap: 8 }}>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Message #memo-notes"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="# Message"
               disabled={loading}
               style={{
                 flex: 1,
                 backgroundColor: "transparent",
-                border: "none",
-                outline: "none",
+                border: "1px solid #202225",
+                borderRadius: 6,
+                padding: "12px 14px",
                 color: "#dcddde",
-                fontSize: "15px",
+                outline: "none",
+                fontSize: 15,
               }}
             />
             <button
               onClick={handleSend}
-              disabled={loading || !input.trim()}
+              disabled={loading}
               style={{
-                padding: "8px 16px",
+                padding: "0 16px",
                 backgroundColor: "#5865f2",
                 color: "#fff",
                 border: "none",
-                borderRadius: "4px",
+                borderRadius: 6,
                 cursor: "pointer",
-                fontWeight: "500",
-                opacity: loading || !input.trim() ? 0.5 : 1,
+                fontWeight: 600,
               }}
             >
               Send
@@ -229,151 +372,59 @@ export default function MemoPage() {
         </div>
       </div>
 
-      {/* Right Sidebar */}
-      <div
-        style={{
-          width: "300px",
-          backgroundColor: "#2f3136",
-          borderLeft: "1px solid #202225",
-          display: "flex",
-          flexDirection: "column",
+      <MemoSidebar
+        panelTab={(panelTab as "details" | "collected") || "details"}
+        selectedMemo={selectedMemo}
+        collectedMemos={collectedMemos}
+        currentTab={currentTab}
+        onPanelTabChange={setPanelTab}
+        onColorChange={(hex) =>
+          setSelectedMemo(
+            selectedMemo ? { ...selectedMemo, font_color: hex } : null
+          )
+        }
+        onColorSave={() => {
+          if (selectedMemo) {
+            handleMemoColorUpdate(
+              selectedMemo,
+              selectedMemo.font_color,
+              updateMemo,
+              showNotification
+            );
+          }
         }}
-      >
-        {/* Sidebar Header */}
-        <div
-          style={{
-            height: "50px",
-            borderBottom: "1px solid #202225",
-            display: "flex",
-            alignItems: "center",
-            padding: "0 16px",
-            color: "#fff",
-            fontSize: "14px",
-            fontWeight: "600",
-          }}
-        >
-          {selectedMemo ? "Memo Details" : "Select a memo"}
-        </div>
+        onSetDefaultColor={handleSetDefaultColor}
+        onColorApplyAll={handleColorApplyAll}
+        onCollectedMemoClick={(memo) => {
+          scrollToMemo(memo.id, messageRefs.current);
+          setSelectedMemo(memo);
+          setPanelTab("details");
+        }}
+      />
 
-        {/* Sidebar Content */}
-        <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
-          {selectedMemo ? (
-            <div>
-              <div style={{ marginBottom: "16px" }}>
-                <div
-                  style={{
-                    color: "#b9bbbe",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    marginBottom: "4px",
-                  }}
-                >
-                  AUTHOR
-                </div>
-                <div style={{ color: "#fff", fontSize: "14px" }}>
-                  {selectedMemo.user.username}
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "16px" }}>
-                <div
-                  style={{
-                    color: "#b9bbbe",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    marginBottom: "4px",
-                  }}
-                >
-                  CREATED
-                </div>
-                <div style={{ color: "#fff", fontSize: "14px" }}>
-                  {new Date(selectedMemo.created_at).toLocaleString()}
-                </div>
-              </div>
-
-              {selectedMemo.updated_at && (
-                <div style={{ marginBottom: "16px" }}>
-                  <div
-                    style={{
-                      color: "#b9bbbe",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    UPDATED
-                  </div>
-                  <div style={{ color: "#fff", fontSize: "14px" }}>
-                    {new Date(selectedMemo.updated_at).toLocaleString()}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ marginBottom: "16px" }}>
-                <div
-                  style={{
-                    color: "#b9bbbe",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    marginBottom: "4px",
-                  }}
-                >
-                  CONTENT
-                </div>
-                <div
-                  style={{
-                    color: "#dcddde",
-                    fontSize: "14px",
-                    backgroundColor: "#202225",
-                    padding: "12px",
-                    borderRadius: "4px",
-                    wordWrap: "break-word",
-                  }}
-                >
-                  {selectedMemo.content}
-                </div>
-              </div>
-
-              {user && selectedMemo.user.id === user.id && (
-                <button
-                  onClick={() => handleDelete(selectedMemo.id)}
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    backgroundColor: "#ed4245",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                    opacity: loading ? 0.5 : 1,
-                  }}
-                >
-                  Delete Memo
-                </button>
-              )}
-            </div>
-          ) : (
-            <div
-              style={{
-                color: "#72767d",
-                fontSize: "14px",
-                textAlign: "center",
-                marginTop: "40px",
-              }}
-            >
-              Click on a memo to view details
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Global Loading */}
       {loading && (
         <div className="global-loading">
           <div className="global-spinner" />
         </div>
+      )}
+
+      {openTabModal && (
+        <TabModal
+          isOpen={!!openTabModal}
+          mode={openTabModal}
+          initialData={
+            openTabModal === "edit" && currentTab
+              ? {
+                  tab_name: currentTab.tab_name,
+                  color: currentTab.color,
+                  font_name: currentTab.font_name,
+                  font_size: currentTab.font_size,
+                }
+              : undefined
+          }
+          onSubmit={handleSubmitTab}
+          onClose={() => setOpenTabModal(false)}
+        />
       )}
     </div>
   );

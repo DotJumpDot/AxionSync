@@ -5,7 +5,11 @@ export type Memo = {
   title: string;
   content: string;
   user: User;
+  tab_id: number | null;
+  font_color: string | null;
   deleted_status: boolean;
+  collected: boolean;
+  collected_time: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -13,11 +17,14 @@ export type Memo = {
 export type CreateMemoRequest = {
   title: string;
   content: string;
+  tab_id?: number | null;
+  font_color?: string | null;
 };
 
 export type UpdateMemoRequest = {
   title: string;
   content: string;
+  font_color?: string | null;
 };
 
 export type MemoResponse = {

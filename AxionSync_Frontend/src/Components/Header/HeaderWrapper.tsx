@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 export default function HeaderWrapper() {
   const pathname = usePathname();
-  const hideHeaderRoutes = ["/", "/register"];
+  const hideHeaderRoutes = ["/", "/register", "/memo"];
   const shouldHideHeader = hideHeaderRoutes.includes(pathname);
 
   if (shouldHideHeader) return null;

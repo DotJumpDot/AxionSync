@@ -14,7 +14,11 @@ class Memo(BaseModel):
     title: str
     content: str
     user: User
+    tab_id: int | None = None
+    font_color: str | None = None
     deleted_status: bool = False
+    collected: bool = False
+    collected_time: datetime | None = None
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -22,8 +26,11 @@ class Memo(BaseModel):
 class CreateMemoRequest(BaseModel):
     title: str
     content: str
+    tab_id: int | None = None
+    font_color: str | None = None
 
 
 class UpdateMemoRequest(BaseModel):
     title: str
     content: str
+    font_color: str | None = None

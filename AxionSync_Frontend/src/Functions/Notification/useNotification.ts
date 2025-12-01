@@ -7,20 +7,25 @@ type NotificationType = "success" | "error" | "info" | "warning";
  * Must be used within a component wrapped by Ant Design's App provider.
  */
 export const useNotification = () => {
-  const { notification } = App.useApp();
+  const { notification, modal } = App.useApp();
 
   const showNotification = (
     msg: string | "Can't get managed to show notification.",
     type: NotificationType = "error",
-    duration: number = 1.5
+    duration: number = 1.5,
+    placement:
+      | "topLeft"
+      | "topRight"
+      | "bottomLeft"
+      | "bottomRight" = "topRight"
   ) => {
     notification[type]({
       message: type.charAt(0).toUpperCase() + type.slice(1),
       description: msg,
-      placement: "topRight",
+      placement,
       duration,
     });
   };
 
-  return { showNotification };
+  return { showNotification, modal };
 };

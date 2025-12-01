@@ -1,3 +1,4 @@
+
 ---------------------run command-----------------------
 # fastapi dev main.py
 # uvicorn main:app --reload --port 8000
@@ -7,12 +8,13 @@
 
 
 ---------------------For venv & pip-----------------------
-python -m venv venv
-venv\Scripts\activate
-pip install "fastapi[standard]"
-pip install -r requiements.txt
-deactivate
-pip freeze > requirements.txt
+
+# python -m venv venv
+# venv\Scripts\activate
+# pip install "fastapi[standard]"
+# pip install -r requiements.txt
+# deactivate
+# pip freeze > requirements.txt
 
 ---------------------Extension-----------------------
 Extension : File Tree Generator
