@@ -51,3 +51,28 @@ body {
   z-index: 2000;
   pointer-events: none; /* เพื่อให้คลิกผ่านได้ */
 }
+
+/* Modern transparent scrollbar styles */
+.memo-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.memo-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.memo-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.memo-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox scrollbar */
+.memo-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}

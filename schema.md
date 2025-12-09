@@ -19,12 +19,14 @@ AxionSync uses PostgreSQL as its relational database. The application manages us
 | nickname | str | Yes | User's nickname/display name |
 | role | str | No | User role (default: "user") |
 | tel | str | Yes | Telephone number |
+| picture_url | str | No | Profile picture filename (default: "unidentified.jpg") |
 | created_at | datetime | No | Record creation timestamp (UTC) |
 | updated_at | datetime | Yes | Record last update timestamp (UTC) |
 
 **Notes:**
 - `username` should be UNIQUE for authentication
 - `role` is used for authorization (e.g., "user", "admin")
+- `picture_url` stores only the filename, images are stored in `public/userProfilePicture/`
 - Timestamps are stored in UTC
 
 ---
@@ -91,6 +93,26 @@ username: str (required)
 password: str (required)
 ```
 
+### UserCreate (Registration)
+```
+username: str (required) - Must be unique
+password: str (required) - Will be hashed with bcrypt
+firstname: str (optional)
+lastname: str (optional)
+nickname: str (optional)
+role: str (optional, default: "user")
+tel: str (optional)
+picture_url: str (optional, default: "unidentified.jpg")
+```
+
+### UserUpdate (Profile Update)
+```
+firstname: str (optional)
+lastname: str (optional)
+nickname: str (optional)
+tel: str (optional)
+```
+
 ### CreateMemoRequest
 ```
 title: str (required)
@@ -119,6 +141,8 @@ CREATE DATABASE axionsync;
 
 ### 1. Create Users Table
 ```sql
+DROP TABLE IF EXISTS "user" CASCADE;
+
 CREATE TABLE IF NOT EXISTS "user" (
     id SERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
@@ -128,6 +152,7 @@ CREATE TABLE IF NOT EXISTS "user" (
     nickname VARCHAR(255),
     role VARCHAR(50) NOT NULL DEFAULT 'user',
     tel VARCHAR(20),
+    picture_url VARCHAR(255) NOT NULL DEFAULT 'unidentified.jpg',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE
 );
@@ -201,6 +226,7 @@ CREATE TABLE IF NOT EXISTS "user" (
     nickname VARCHAR(255),
     role VARCHAR(50) NOT NULL DEFAULT 'user',
     tel VARCHAR(20),
+    picture_url VARCHAR(255) NOT NULL DEFAULT 'unidentified.jpg',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE
 );
@@ -244,8 +270,8 @@ CREATE INDEX IF NOT EXISTS idx_memo_user_deleted ON memo(user_id, deleted_status
 
 ```sql
 -- Create a sample user
-INSERT INTO "user" (username, password_hash, firstname, lastname, nickname, role, tel)
-VALUES ('admin', '1234', 'Demo', 'User', 'Demo', 'Admin', '0800000000')
+INSERT INTO "user" (username, password_hash, firstname, lastname, nickname, role, tel, picture_url)
+VALUES ('admin', '1234', 'Demo', 'User', 'Demo', 'Admin', '0800000000', 'unidentified.jpg')
 RETURNING id;
 
 -- Assume returned id is 1
@@ -267,66 +293,6 @@ VALUES
     ('Memo', 'Bug: cannot login', 1, 2, '#FFAA00'),
     ('Memo', 'New idea: add themes', 1, 3, NULL);
 ```
-
----
-
-## Common Queries
-
-### Get all non-deleted memos for a user (ordered oldest→newest)
-```sql
-SELECT m.* FROM memo m
-WHERE m.user_id = $1 AND m.deleted_status = FALSE
-ORDER BY m.created_at ASC;
-```
-
-### Get memos for a user by tab (ordered oldest→newest)
-```sql
-SELECT m.* FROM memo m
-WHERE m.user_id = $1 AND m.tab_id = $2 AND m.deleted_status = FALSE
-ORDER BY m.created_at ASC;
-```
-
-### Get user with password hash (for authentication)
-```sql
-SELECT * FROM "user" WHERE username = $1;
-```
-
-### Get a single memo with user details
-```sql
-SELECT m.*, u.* FROM memo m
-JOIN "user" u ON m.user_id = u.id
-WHERE m.id = $1 AND m.deleted_status = FALSE;
-```
-
-### Soft delete a memo
-```sql
-UPDATE memo SET deleted_status = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1;
-```
-
-### Create a new user
-```sql
-INSERT INTO "user" (username, password_hash, firstname, lastname, nickname, role, tel)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING *;
-```
-
-### Create a new memo
-```sql
-INSERT INTO memo (title, content, user_id)
-VALUES ($1, $2, $3)
-RETURNING *;
-```
-
-### Collect a memo
-```sql
-UPDATE memo 
-SET collected = TRUE, collected_time = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-RETURNING *;
-```
-
----
 
 ## Database Constraints & Relationships
 
@@ -361,3 +327,104 @@ X_API_KEY=['1234']
 - Soft delete pattern used for memos (never physically deleted)
 - Passwords stored as hashed values using bcrypt
 - User roles support future authorization features
+
+### Add picture_url column (if upgrading existing database)
+```sql
+ALTER TABLE "user" ADD COLUMN IF NOT EXISTS picture_url VARCHAR(255) NOT NULL DEFAULT 'unidentified.jpg';
+```
+
+---
+
+## API Endpoints
+
+### User Registration & Profile Endpoints
+
+#### POST /users/register
+Register a new user with password hashing.
+- **Auth:** API key required (X-API-KEY header)
+- **Body:** 
+```json
+{
+  "username": "string (required, must be unique)",
+  "password": "string (required, will be hashed)",
+  "firstname": "string (optional)",
+  "lastname": "string (optional)",
+  "nickname": "string (optional)",
+  "role": "string (optional, default: 'user')",
+  "tel": "string (optional)",
+  "picture_url": "string (optional, default: 'unidentified.jpg')"
+}
+```
+- **Response:** User object (without password)
+- **Errors:** 
+  - 400: Username already exists
+  - 500: Failed to create user
+
+#### GET /users/users
+Get all users.
+- **Auth:** Bearer token required
+- **Response:** Array of User objects
+
+#### GET /users/{user_id}
+Get user by ID.
+- **Auth:** Bearer token required
+- **Response:** User object
+
+#### POST /users/get_by_id
+Get user by ID (POST method).
+- **Auth:** Bearer token required
+- **Body:** `{ "id": number }`
+- **Response:** User object
+
+#### PUT /users/{user_id}/profile
+Update user profile (firstname, lastname, nickname, tel).
+- **Auth:** Bearer token required (can only update own profile)
+- **Body:** `{ firstname?, lastname?, nickname?, tel? }`
+- **Response:** Updated User object
+
+#### POST /users/{user_id}/picture
+Upload profile picture.
+- **Auth:** Bearer token required (can only update own picture)
+- **Body:** `multipart/form-data` with `file` field
+- **Allowed types:** JPEG, PNG, GIF, WebP
+- **Max size:** 5MB
+- **Response:** `{ success: true, picture_url: string, user: User }`
+
+---
+
+## Sample Data
+
+### Create Admin User via API
+```bash
+curl -X POST "http://localhost:8000/users/register" \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: 1234" \
+  -d '{
+    "username": "admin",
+    "password": "1234",
+    "firstname": "Demo",
+    "lastname": "User",
+    "nickname": "Demo",
+    "role": "Admin",
+    "tel": "0800000000",
+    "picture_url": "unidentified.jpg"
+  }'
+```
+
+### Create User via SQL (with bcrypt hash)
+```sql
+-- Note: Password '1234' hashed with bcrypt
+-- Generate hash: python -c "from passlib.hash import bcrypt; print(bcrypt.hash('1234'))"
+INSERT INTO "user" (username, password_hash, firstname, lastname, nickname, role, tel, picture_url, created_at)
+VALUES (
+    'admin',
+    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.OPKgINmAOTjVN6',  -- bcrypt hash of '1234'
+    'Demo',
+    'User',
+    'Demo',
+    'Admin',
+    '0800000000',
+    'unidentified.jpg',
+    NOW()
+) RETURNING *;
+```

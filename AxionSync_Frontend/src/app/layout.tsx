@@ -1,10 +1,7 @@
-import { Metadata } from "next";
-import Providers from "./providers";
-import HeaderWrapper from "@/Components/Header/HeaderWrapper";
-import SiderWrapper from "@/Components/NavBar/SiderWrapper";
-import LayoutWrapper from "./LayoutWrapper";
+import type { Metadata } from "next";
 import "./globals.css";
 import "antd/dist/reset.css";
+import { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "AxionSync",
@@ -12,17 +9,6 @@ export const metadata: Metadata = {
   keywords: ["AxionSync", "Next.js", "Application", "Thailand"],
 };
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        <Providers>
-          <HeaderWrapper />
-          <SiderWrapper />
-          <LayoutWrapper>{children}</LayoutWrapper>
-          <div id="notification-root"></div>
-        </Providers>
-      </body>
-    </html>
-  );
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }

@@ -1,5 +1,6 @@
 import type { Tab } from "@/Types/Tab";
 import { getContrastColor } from "@/Functions/Memo/memo_function_color";
+import { useTranslations } from "next-intl";
 
 interface MemoHeaderProps {
   currentTab: Tab | null;
@@ -30,6 +31,7 @@ export default function MemoHeader({
   onEditTab,
   onCreateTab,
 }: MemoHeaderProps) {
+  const tMemo = useTranslations("memo");
   return (
     <div
       style={{
@@ -81,7 +83,7 @@ export default function MemoHeader({
             }}
             title="Click to rename channel"
           >
-            {currentTab ? currentTab.tab_name : "memo-notes"}
+            {currentTab ? currentTab.tab_name : tMemo("header.defaultName")}
           </button>
         )}
       </div>
@@ -125,7 +127,7 @@ export default function MemoHeader({
           padding: "6px 10px",
           cursor: "pointer",
         }}
-        title="Edit tab"
+        title={tMemo("header.editTab")}
       >
         ✏️
       </button>
@@ -144,7 +146,7 @@ export default function MemoHeader({
           cursor: "pointer",
           fontWeight: 600,
         }}
-        title="Create tab"
+        title={tMemo("header.createTab")}
       >
         +
       </button>

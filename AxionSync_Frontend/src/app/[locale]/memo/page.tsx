@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryState } from "nuqs";
+import { useTranslations } from "next-intl";
 import { useMemoStore } from "@/Store/memo";
 import { useTabStore } from "@/Store/tab";
-import { useAuthStore } from "@/Store/auth";
 import { useNotification } from "@/Functions/Notification/useNotification";
 import MemoHeader from "@/Components/Memo/MemoHeader";
-import MemoItem from "@/Components/Memo/MemoItem";
 import MemoSidebar from "@/Components/Memo/MemoSidebar";
+import MemoMessageGroup from "@/Components/Memo/MemoMessageGroup";
 import TabModal from "@/Components/Memo/TabModal";
 import type { Memo } from "@/Types/Memo";
 import type { CreateTabRequest, UpdateTabRequest } from "@/Types/Tab";
@@ -17,10 +17,8 @@ import {
   scrollToBottom,
 } from "@/Functions/Memo/memo_function_scroll";
 import { filterCollectedMemos } from "@/Functions/Memo/memo_function_filters";
-import {
-  applyColorToAllMemos,
-  shouldShowMemoHeader,
-} from "@/Functions/Memo/memo_function_helpers";
+import { applyColorToAllMemos } from "@/Functions/Memo/memo_function_helpers";
+import { groupMemos } from "@/Functions/Memo/memo_function_grouping";
 import {
   handleMemoDelete,
   handleMemoCollect,
@@ -30,6 +28,8 @@ import {
   handleTabUpdate,
   handleTabCreate,
 } from "@/Functions/Memo/memo_function_handlers";
+import useShowDeleteConfirm from "@/Components/Modal/DeleteConfirmModal";
+import useShowConfirmAllColorModal from "@/Components/Modal/Memo_ConfirmAllColorModal";
 
 export default function MemoPage() {
   const {
@@ -44,16 +44,18 @@ export default function MemoPage() {
   } = useMemoStore();
   const { tabs, currentTabId, getTabs, setCurrentTab, updateTab, createTab } =
     useTabStore();
-  const { user } = useAuthStore();
   const { showNotification: baseShowNotification, modal } = useNotification();
+  const tMemo = useTranslations("memo");
+  const tCommon = useTranslations("common");
+  const showDeleteConfirm = useShowDeleteConfirm();
+  const showConfirmAllColorModal = useShowConfirmAllColorModal();
 
-  // Wrap notification to use topLeft placement for memo page
+  // Wrap notification to use topLeft placement for memo page (error only)
   const showNotification = (
     msg: string,
-    type?: "success" | "error" | "info" | "warning",
-    duration?: number
+    type?: "error" | "warning" | "info"
   ) => {
-    baseShowNotification(msg, type, duration, "topLeft");
+    baseShowNotification(msg, type, 3000, "topLeft");
   };
 
   const [input, setInput] = useState("");
@@ -61,7 +63,7 @@ export default function MemoPage() {
   const [panelTab, setPanelTab] = useQueryState("panel", {
     defaultValue: "details" as "details" | "collected",
   });
-  const [hoveredMemo, setHoveredMemo] = useState<number | null>(null);
+  const [hoveredMemoId, setHoveredMemoId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [editingMemoId, setEditingMemoId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -73,12 +75,14 @@ export default function MemoPage() {
   const [defaultMemoColor, setDefaultMemoColor] = useState("#dcddde");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const currentTab = useMemo(
     () => tabs.find((t) => t.id === currentTabId) || null,
     [tabs, currentTabId]
   );
   const collectedMemos = useMemo(() => filterCollectedMemos(memos), [memos]);
+  const memoGroups = useMemo(() => groupMemos(memos), [memos]);
 
   useEffect(() => {
     getTabs();
@@ -113,29 +117,64 @@ export default function MemoPage() {
       font_color: defaultMemoColor,
     }).then((result) => {
       if (result.success) {
-        showNotification("Memo sent!", "success");
         setInput("");
-        setTimeout(() => scrollToBottom(messagesEndRef), 50);
+        setTimeout(() => {
+          scrollToBottom(messagesEndRef);
+          inputRef.current?.focus(); // Keep focus on input
+        }, 50);
       } else {
-        showNotification(result.message || "Failed to send memo", "error");
+        showNotification(
+          result.message || tMemo("messages.sendFailed"),
+          "error"
+        );
       }
     });
   };
 
-  const handleDelete = (id: number) =>
-    handleMemoDelete(id, deleteMemo, showNotification, (deletedId: number) => {
-      if (selectedMemo?.id === deletedId) setSelectedMemo(null);
-      setOpenMenuId(null);
+  const handleDelete = (id: number) => {
+    showDeleteConfirm(modal, {
+      title: "Delete Memo",
+      content:
+        "Are you sure you want to delete this memo? This action cannot be undone.",
+      okText: "Delete",
+      cancelText: tCommon("cancel") || "Cancel",
+      onConfirm: async () => {
+        await handleMemoDelete(
+          id,
+          deleteMemo,
+          showNotification,
+          (deletedId: number) => {
+            if (selectedMemo?.id === deletedId) setSelectedMemo(null);
+            setOpenMenuId(null);
+          },
+          {
+            error: tMemo("messages.deleteFail"),
+          }
+        );
+      },
     });
+  };
 
   const handleCollect = (id: number) =>
-    handleMemoCollect(id, collectMemo, showNotification, () =>
-      setOpenMenuId(null)
+    handleMemoCollect(
+      id,
+      collectMemo,
+      showNotification,
+      () => setOpenMenuId(null),
+      {
+        error: tMemo("messages.collectFail"),
+      }
     );
 
   const handleUncollect = (id: number) =>
-    handleMemoUncollect(id, uncollectMemo, showNotification, () =>
-      setOpenMenuId(null)
+    handleMemoUncollect(
+      id,
+      uncollectMemo,
+      showNotification,
+      () => setOpenMenuId(null),
+      {
+        error: tMemo("messages.uncollectFail"),
+      }
     );
 
   const saveEditMemo = (id: number) =>
@@ -148,6 +187,9 @@ export default function MemoPage() {
       () => {
         setEditingMemoId(null);
         setEditContent("");
+      },
+      {
+        error: tMemo("messages.updateFail"),
       }
     );
 
@@ -159,69 +201,69 @@ export default function MemoPage() {
     handleTabUpdate(
       currentTab.id,
       {
-        tab_name: channelNameDraft.trim(),
-        color: currentTab.color,
-        font_name: currentTab.font_name,
-        font_size: currentTab.font_size,
+        ...currentTab,
+        tab_name: channelNameDraft,
       },
       updateTab,
       showNotification,
-      () => setChannelEditing(false)
+      () => setChannelEditing(false),
+      {
+        error: tMemo("messages.tabUpdateFail"),
+      }
     );
   };
 
-  const handleSubmitTab = (data: CreateTabRequest | UpdateTabRequest) => {
-    if (openTabModal === "create") {
-      handleTabCreate(
-        data as CreateTabRequest,
-        createTab,
-        showNotification,
-        (tabId: number) => {
-          setCurrentTab(tabId);
-          setOpenTabModal(false);
-        }
-      );
-    } else if (openTabModal === "edit" && currentTab) {
-      handleTabUpdate(
+  const handleSetDefaultColor = () => {
+    if (!selectedMemo?.font_color) return;
+    setDefaultMemoColor(selectedMemo.font_color);
+  };
+
+  const handleSubmitTab = (
+    data: CreateTabRequest | UpdateTabRequest
+  ): Promise<void> => {
+    if (openTabModal === "edit" && currentTab) {
+      return handleTabUpdate(
         currentTab.id,
-        data as UpdateTabRequest,
+        data,
         updateTab,
         showNotification,
         () => setOpenTabModal(false)
       );
     }
-  };
 
-  const handleSetDefaultColor = () => {
-    if (selectedMemo && selectedMemo.font_color) {
-      setDefaultMemoColor(selectedMemo.font_color);
-      showNotification(
-        `Default color set to ${selectedMemo.font_color}`,
-        "success"
-      );
-    }
+    return handleTabCreate(
+      data,
+      createTab,
+      showNotification,
+      (newTabId) => {
+        setOpenTabModal(false);
+        getTabs();
+        setCurrentTab(newTabId);
+      },
+      {
+        error: tMemo("messages.tabCreateFail"),
+      }
+    );
   };
 
   const handleColorApplyAll = () => {
     if (!selectedMemo) return;
 
-    modal.confirm({
-      title: "Apply Color to All Memos",
-      content: `Are you sure you want to apply the color "${
-        selectedMemo.font_color || "#dcddde"
-      }" to all memos in this tab?`,
-      okText: "Apply",
-      okType: "primary",
-      cancelText: "Cancel",
-      onOk: async () => {
-        const targetColor = selectedMemo.font_color || "#dcddde";
+    const targetColor = selectedMemo.font_color || "#dcddde";
+
+    showConfirmAllColorModal(modal, {
+      color: targetColor,
+      onConfirm: async () => {
         await applyColorToAllMemos(
           memos,
           targetColor,
           updateMemo,
           getMemos,
           currentTabId,
-          showNotification
+          showNotification,
+          {
+            error: tMemo("messages.colorFailed"),
+          }
         );
       },
     });
@@ -260,66 +302,59 @@ export default function MemoPage() {
         />
 
         <div
+          className="memo-scrollbar"
           style={{
             flex: 1,
             overflowY: "auto",
+            overflowX: "hidden",
             padding: "16px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
+            minHeight: 0,
           }}
         >
-          {memos.map((memo, index) => (
-            <div
-              key={memo.id}
-              ref={(el) => {
-                messageRefs.current[memo.id] = el;
-              }}
-              style={{
-                marginTop: shouldShowMemoHeader(memo, index, memos) ? 16 : 0,
-              }}
-            >
-              <MemoItem
-                memo={memo}
-                isSelected={selectedMemo?.id === memo.id}
-                isHovered={hoveredMemo === memo.id}
-                isEditing={editingMemoId === memo.id}
-                editContent={editContent}
-                openMenuId={openMenuId}
-                currentTab={currentTab}
-                currentUserId={user?.id}
-                showHeader={shouldShowMemoHeader(memo, index, memos)}
-                onSelect={() => setSelectedMemo(memo)}
-                onHoverChange={(hovered) => {
-                  if (hovered) setHoveredMemo(memo.id);
-                  else if (openMenuId !== memo.id) setHoveredMemo(null);
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              minHeight: "100%",
+            }}
+          >
+            {memoGroups.map((group, groupIndex) => (
+              <div
+                key={group.id}
+                style={{
+                  marginBottom: groupIndex < memoGroups.length - 1 ? 16 : 0,
                 }}
-                onEditChange={setEditContent}
-                onEditSave={() => saveEditMemo(memo.id)}
-                onEditCancel={() => {
-                  setEditingMemoId(null);
-                  setEditContent("");
-                }}
-                onMenuToggle={() =>
-                  setOpenMenuId(openMenuId === memo.id ? null : memo.id)
-                }
-                onEdit={() => {
-                  setEditingMemoId(memo.id);
-                  setEditContent(memo.content);
-                  setOpenMenuId(null);
-                }}
-                onCollect={
-                  !memo.collected ? () => handleCollect(memo.id) : undefined
-                }
-                onUncollect={
-                  memo.collected ? () => handleUncollect(memo.id) : undefined
-                }
-                onDelete={() => handleDelete(memo.id)}
-                onMenuClose={() => setOpenMenuId(null)}
-              />
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
+              >
+                <MemoMessageGroup
+                  group={group}
+                  hoveredMemoId={hoveredMemoId}
+                  openMenuId={openMenuId}
+                  editingMemoId={editingMemoId}
+                  editContent={editContent}
+                  currentTabFontSize={currentTab?.font_size}
+                  currentTabFontName={currentTab?.font_name}
+                  onHoverMemo={setHoveredMemoId}
+                  onMenuToggle={setOpenMenuId}
+                  onEdit={(id, content) => {
+                    setEditingMemoId(id);
+                    setEditContent(content);
+                    setOpenMenuId(null);
+                  }}
+                  onEditContentChange={setEditContent}
+                  onEditSave={saveEditMemo}
+                  onEditCancel={() => {
+                    setEditingMemoId(null);
+                    setEditContent("");
+                  }}
+                  onCollect={handleCollect}
+                  onUncollect={handleUncollect}
+                  onDelete={handleDelete}
+                />
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
         <div
@@ -331,6 +366,7 @@ export default function MemoPage() {
         >
           <div style={{ display: "flex", gap: 8 }}>
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -340,7 +376,7 @@ export default function MemoPage() {
                   handleSend();
                 }
               }}
-              placeholder="# Message"
+              placeholder={tMemo("input.placeholder")}
               disabled={loading}
               style={{
                 flex: 1,
@@ -366,7 +402,7 @@ export default function MemoPage() {
                 fontWeight: 600,
               }}
             >
-              Send
+              {tCommon("send")}
             </button>
           </div>
         </div>
@@ -389,7 +425,10 @@ export default function MemoPage() {
               selectedMemo,
               selectedMemo.font_color,
               updateMemo,
-              showNotification
+              showNotification,
+              {
+                error: tMemo("messages.colorUpdateFail"),
+              }
             );
           }
         }}

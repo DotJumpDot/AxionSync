@@ -3,7 +3,7 @@ from src.api.api_auth import require_bearer
 from src.models.entity.en_tab import Tab, CreateTabRequest, UpdateTabRequest
 from src.services.sv_tab import TabService
 
-router = APIRouter(prefix="/tabs", tags=["tabs"])
+router = APIRouter(prefix="/tabs", tags=["Tab"])
 
 
 @router.get("", response_model=list[Tab])

@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import type { CreateTabRequest, UpdateTabRequest } from "@/Types/Tab";
+import { useTranslations } from "next-intl";
 
 interface TabModalProps {
   isOpen: boolean;
@@ -16,6 +19,8 @@ export default function TabModal({
   onSubmit,
   onClose,
 }: TabModalProps) {
+  const tMemo = useTranslations("memo");
+  const tCommon = useTranslations("common");
   const [formData, setFormData] = React.useState<CreateTabRequest>({
     tab_name: initialData?.tab_name || "",
     color: initialData?.color || "#5865f2",
@@ -122,7 +127,9 @@ export default function TabModal({
             marginBottom: "20px",
           }}
         >
-          {mode === "create" ? "Create New Tab" : "Edit Tab"}
+          {mode === "create"
+            ? tMemo("modal.titleCreate")
+            : tMemo("modal.titleEdit")}
         </h2>
 
         <form onSubmit={handleSubmit}>
@@ -136,7 +143,7 @@ export default function TabModal({
                 marginBottom: "8px",
               }}
             >
-              TAB NAME
+              {tMemo("modal.tabName")}
             </label>
             <input
               type="text"
@@ -168,7 +175,7 @@ export default function TabModal({
                 marginBottom: "8px",
               }}
             >
-              COLOR
+              {tMemo("modal.color")}
             </label>
             <div style={{ display: "flex", gap: "8px" }}>
               <input
@@ -217,7 +224,7 @@ export default function TabModal({
                 marginBottom: "8px",
               }}
             >
-              FONT NAME
+              {tMemo("modal.fontName")}
             </label>
             <select
               value={formData.font_name}
@@ -255,7 +262,7 @@ export default function TabModal({
                 marginBottom: "8px",
               }}
             >
-              FONT SIZE
+              {tMemo("modal.fontSize")}
             </label>
             <input
               type="number"
@@ -299,7 +306,7 @@ export default function TabModal({
                 fontWeight: "500",
               }}
             >
-              Cancel
+              {tCommon("cancel")}
             </button>
             <button
               type="submit"
@@ -314,7 +321,7 @@ export default function TabModal({
                 fontWeight: "500",
               }}
             >
-              {mode === "create" ? "Create" : "Save"}
+              {mode === "create" ? tCommon("create") : tCommon("save")}
             </button>
           </div>
         </form>

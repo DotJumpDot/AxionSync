@@ -1,0 +1,71 @@
+{
+  "tabs": {
+    "collected": "Collected Memos",
+    "details": "Memo Details"
+  },
+  "fields": {
+    "fontColor": "FONT COLOR",
+    "author": "AUTHOR",
+    "created": "CREATED",
+    "updated": "UPDATED",
+    "collected": "COLLECTED",
+    "content": "CONTENT"
+  },
+  "modal": {
+    "titleCreate": "Create New Tab",
+    "titleEdit": "Edit Tab",
+    "tabName": "TAB NAME",
+    "color": "COLOR",
+    "fontName": "FONT NAME",
+    "fontSize": "FONT SIZE"
+  },
+  "empty": {
+    "selectMemo": "Click on a memo to view details",
+    "noCollected": "No collected memos yet"
+  },
+  "sidebar": {
+    "tabPrefix": "Tab: {name}",
+    "noTab": "No tab selected"
+  },
+  "actions": {
+    "saveColor": "Save Color",
+    "setDefault": "Set as Default Color",
+    "applyAll": "Apply to All Memos",
+    "applyColorTitle": "Apply Color to All Memos",
+    "applyColorContent": "Are you sure you want to apply the color \"{color}\" to all memos in this tab?",
+    "apply": "Apply",
+    "deleteTitle": "Delete Memo",
+    "deleteContent": "Are you sure you want to delete this memo?"
+  },
+  "messages": {
+    "sent": "Memo sent!",
+    "sendFailed": "Failed to send memo",
+    "colorApplied": "Color applied to all memos!",
+    "colorFailed": "Failed to apply color to all memos",
+    "defaultColorSet": "Default color set for new memos",
+    "deleteSuccess": "Memo deleted",
+    "deleteFail": "Failed to delete",
+    "collectSuccess": "Memo collected!",
+    "collectFail": "Failed to collect",
+    "uncollectSuccess": "Memo uncollected!",
+    "uncollectFail": "Failed to uncollect",
+    "updateSuccess": "Memo updated!",
+    "updateFail": "Failed to update",
+    "colorUpdateSuccess": "Color updated",
+    "colorUpdateFail": "Failed to update color",
+    "tabUpdateSuccess": "Tab updated",
+    "tabUpdateFail": "Failed to update tab",
+    "tabCreateSuccess": "Tab created",
+    "tabCreateFail": "Failed to create tab"
+  },
+  "input": {
+    "placeholder": "# Message"
+  },
+  "header": {
+    "editHint": "Click to rename channel",
+    "editTab": "Edit tab",
+    "createTab": "Create tab",
+    "defaultName": "memo-notes"
+  },
+  "collectedBy": "by {username}"
+}

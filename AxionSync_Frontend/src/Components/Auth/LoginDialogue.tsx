@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/Store/auth";
 import type { LoginRequest } from "@/Types/Auth";
-import { validateLoginRequest } from "@/validate/V_Auth";
+import { validateLoginRequest } from "@/Functions/Auth/validate_login";
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/Functions/Notification/useNotification";
+import { useLocale } from "next-intl";
+import { Locale } from "@/languages/config";
 
 function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
   const { showNotification } = useNotification();
@@ -14,7 +16,9 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
   const [visible, setVisible] = useState(false);
 
   const router = useRouter();
-  const { login, loading, error, token, tokenExpiresAt } = useAuthStore();
+  const locale = useLocale();
+  const { login, loading, error, token, tokenExpiresAt, setLocale } =
+    useAuthStore();
 
   // const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -30,12 +34,14 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
     if (valid) {
       const timeout = setTimeout(() => {
         toggleLogin();
-        router.push("/mainmenu");
+        // Persist locale so other screens (e.g., mainmenu) can pick it up
+        setLocale(locale as Locale);
+
+        router.push(`/${locale}/mainmenu`);
       }, 150);
       return () => clearTimeout(timeout);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, tokenExpiresAt]);
+  }, [token, tokenExpiresAt, locale, router, setLocale, toggleLogin]);
 
   const handleClose = () => {
     setVisible(false);

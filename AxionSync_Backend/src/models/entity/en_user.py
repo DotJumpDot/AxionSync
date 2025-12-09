@@ -15,6 +15,7 @@ class User(BaseModel):
     nickname: str | None = None
     role: str = "user"
     tel: str | None = None
+    picture_url: str = "unidentified.jpg"
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -27,6 +28,7 @@ class UserResponse(BaseModel):
     nickname: str | None = None
     role: str
     tel: str | None = None
+    picture_url: str = "unidentified.jpg"
     created_at: datetime
 
     # Pydantic v2 config
@@ -41,6 +43,15 @@ class UserResponse(BaseModel):
 class UserCreate(BaseModel):
     username: str
     password: str
+    firstname: str | None = None
+    lastname: str | None = None
+    nickname: str | None = None
+    role: str = "User"
+    tel: str | None = None
+    picture_url: str | None = None  # Optional, defaults to "unidentified.jpg"
+
+
+class UserUpdate(BaseModel):
     firstname: str | None = None
     lastname: str | None = None
     nickname: str | None = None

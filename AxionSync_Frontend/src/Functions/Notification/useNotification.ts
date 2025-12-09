@@ -20,7 +20,7 @@ export const useNotification = () => {
       | "bottomRight" = "topRight"
   ) => {
     notification[type]({
-      message: type.charAt(0).toUpperCase() + type.slice(1),
+      title: type.charAt(0).toUpperCase() + type.slice(1),
       description: msg,
       placement,
       duration,

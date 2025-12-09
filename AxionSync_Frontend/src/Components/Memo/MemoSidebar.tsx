@@ -1,7 +1,10 @@
+"use client";
+
 import type { Memo } from "@/Types/Memo";
 import type { Tab } from "@/Types/Tab";
 import ColorPicker from "./ColorPicker";
 import ColorActions from "./ColorActions";
+import { useTranslations } from "next-intl";
 
 interface MemoSidebarProps {
   panelTab: "details" | "collected";
@@ -28,6 +31,9 @@ export default function MemoSidebar({
   onColorApplyAll,
   onCollectedMemoClick,
 }: MemoSidebarProps) {
+  const tMemo = useTranslations("memo");
+  const tCommon = useTranslations("common");
+
   return (
     <div
       style={{
@@ -61,7 +67,7 @@ export default function MemoSidebar({
             transition: "background 0.2s ease",
           }}
         >
-          Collected Memos
+          {tMemo("tabs.collected")}
         </div>
         <div
           onClick={() => onPanelTabChange("details")}
@@ -78,7 +84,7 @@ export default function MemoSidebar({
             transition: "background 0.2s ease",
           }}
         >
-          Memo Details
+          {tMemo("tabs.details")}
         </div>
       </div>
 
@@ -87,30 +93,36 @@ export default function MemoSidebar({
           selectedMemo ? (
             <div>
               <ColorPicker
-                label="FONT COLOR"
+                label={tMemo("fields.fontColor")}
                 value={selectedMemo.font_color || "#dcddde"}
                 onChange={onColorChange}
               />
               <ColorActions
+                saveLabel={tMemo("actions.saveColor")}
+                setDefaultLabel={tMemo("actions.setDefault")}
+                applyAllLabel={tMemo("actions.applyAll")}
                 onSave={onColorSave}
                 onSetDefault={onSetDefaultColor}
                 onApplyAll={onColorApplyAll}
               />
 
-              <DetailField label="AUTHOR" value={selectedMemo.user.username} />
               <DetailField
-                label="CREATED"
+                label={tMemo("fields.author")}
+                value={selectedMemo.user.username}
+              />
+              <DetailField
+                label={tMemo("fields.created")}
                 value={new Date(selectedMemo.created_at).toLocaleString()}
               />
               {selectedMemo.updated_at && (
                 <DetailField
-                  label="UPDATED"
+                  label={tMemo("fields.updated")}
                   value={new Date(selectedMemo.updated_at).toLocaleString()}
                 />
               )}
               {selectedMemo.collected && selectedMemo.collected_time && (
                 <DetailField
-                  label="COLLECTED"
+                  label={tMemo("fields.collected")}
                   value={new Date(selectedMemo.collected_time).toLocaleString()}
                   valueColor="#43b581"
                 />
@@ -124,7 +136,7 @@ export default function MemoSidebar({
                     marginBottom: 4,
                   }}
                 >
-                  CONTENT
+                  {tMemo("fields.content")}
                 </div>
                 <div
                   style={{
@@ -141,17 +153,18 @@ export default function MemoSidebar({
               </div>
             </div>
           ) : (
-            <EmptyState message="Click on a memo to view details" />
+            <EmptyState message={tMemo("empty.selectMemo")} />
           )
         ) : (
           <div>
             {collectedMemos.length === 0 ? (
-              <EmptyState message="No collected memos yet" />
+              <EmptyState message={tMemo("empty.noCollected")} />
             ) : (
               collectedMemos.map((memo) => (
                 <CollectedMemoCard
                   key={memo.id}
                   memo={memo}
+                  tCommon={tCommon}
                   onClick={() => onCollectedMemoClick(memo)}
                 />
               ))
@@ -168,7 +181,9 @@ export default function MemoSidebar({
           fontSize: 12,
         }}
       >
-        {currentTab ? `Tab: ${currentTab.tab_name}` : "No tab selected"}
+        {currentTab
+          ? tMemo("sidebar.tabPrefix", { name: currentTab.tab_name })
+          : tMemo("sidebar.noTab")}
       </div>
     </div>
   );
@@ -217,9 +232,11 @@ function EmptyState({ message }: { message: string }) {
 
 function CollectedMemoCard({
   memo,
+  tCommon,
   onClick,
 }: {
   memo: Memo;
+  tCommon: ReturnType<typeof useTranslations>;
   onClick: () => void;
 }) {
   return (
@@ -251,7 +268,7 @@ function CollectedMemoCard({
         {memo.content}
       </div>
       <div style={{ color: "#72767d", fontSize: 12, marginTop: 4 }}>
-        by {memo.user.username}
+        {tCommon("byAuthor", { username: memo.user.username })}
       </div>
     </div>
   );

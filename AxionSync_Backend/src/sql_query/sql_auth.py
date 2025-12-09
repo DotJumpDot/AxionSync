@@ -22,7 +22,7 @@ class SQLAuth:
         """
         self.db.cursor.execute(
             """
-            SELECT id, username, firstname, lastname, nickname, role, tel, created_at, password
+            SELECT id, username, firstname, lastname, nickname, role, tel, created_at, password_hash
             FROM "user"
             WHERE username = %s;
         """,

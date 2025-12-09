@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import authService from "@/Service/auth";
 import type { User } from "@/Types/User";
 import type { LoginRequest, LoginResponse } from "@/Types/Auth";
+import { Locale } from "@/languages/config";
 
 type AuthStore = {
   user: User | null;
@@ -13,8 +14,10 @@ type AuthStore = {
   token: string | null;
   tokenExpiresAt: number | null; // epoch ms
   logoutTimeoutId: number | null;
+  locale: Locale; // persisted locale preference
   login: (data: LoginRequest) => Promise<{ success: boolean }>;
   logout: () => void;
+  setLocale: (locale: Locale) => void;
 };
 
 export const useAuthStore = create<AuthStore>()(
@@ -27,6 +30,11 @@ export const useAuthStore = create<AuthStore>()(
       token: null,
       tokenExpiresAt: null,
       logoutTimeoutId: null,
+      locale: "en" as Locale,
+
+      setLocale: (locale: Locale) => {
+        set({ locale });
+      },
 
       login: async (data: LoginRequest) => {
         set({ loading: true });
@@ -102,6 +110,7 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         token: state.token,
         tokenExpiresAt: state.tokenExpiresAt,
+        locale: state.locale,
       }),
       onRehydrateStorage: () => (restored) => {
         if (!restored) return;

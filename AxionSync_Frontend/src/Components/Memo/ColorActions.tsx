@@ -1,10 +1,16 @@
 interface ColorActionsProps {
+  saveLabel: string;
+  setDefaultLabel: string;
+  applyAllLabel: string;
   onSave: () => void;
   onSetDefault: () => void;
   onApplyAll: () => void;
 }
 
 export default function ColorActions({
+  saveLabel,
+  setDefaultLabel,
+  applyAllLabel,
   onSave,
   onSetDefault,
   onApplyAll,
@@ -39,7 +45,7 @@ export default function ColorActions({
           e.currentTarget.style.transform = "translateY(0)";
         }}
       >
-        Save Color
+        {saveLabel}
       </button>
       <button
         onClick={onSetDefault}
@@ -62,7 +68,7 @@ export default function ColorActions({
           e.currentTarget.style.transform = "translateY(0)";
         }}
       >
-        Set as Default
+        {setDefaultLabel}
       </button>
       <button
         onClick={onApplyAll}
@@ -85,7 +91,7 @@ export default function ColorActions({
           e.currentTarget.style.transform = "translateY(0)";
         }}
       >
-        Apply to All Memos
+        {applyAllLabel}
       </button>
     </div>
   );

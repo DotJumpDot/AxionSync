@@ -2,7 +2,7 @@ import type { Memo } from "@/Types/Memo";
 
 type ShowNotification = (
   msg: string,
-  type?: "success" | "error" | "info" | "warning",
+  type?: "error" | "info" | "warning",
   duration?: number,
   placement?: "topLeft" | "topRight" | "bottomLeft" | "bottomRight"
 ) => void;
@@ -27,7 +27,8 @@ export const applyColorToAllMemos = async (
     tabId?: number | null
   ) => Promise<{ success: boolean; message?: string }>,
   currentTabId: number | null,
-  showNotification: ShowNotification
+  showNotification: ShowNotification,
+  messages?: { error: string }
 ): Promise<void> => {
   const promises = memos.map((memo) =>
     updateMemo(memo.id, {
@@ -39,11 +40,13 @@ export const applyColorToAllMemos = async (
 
   try {
     await Promise.all(promises);
-    showNotification("Color applied to all memos!", "success");
     // Refresh memos
     if (currentTabId) await getMemos(currentTabId);
   } catch {
-    showNotification("Failed to apply color to all memos", "error");
+    showNotification(
+      messages?.error || "Failed to apply color to all memos",
+      "error"
+    );
   }
 };
 

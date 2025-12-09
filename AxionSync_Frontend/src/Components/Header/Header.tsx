@@ -1,9 +1,12 @@
 "use client";
 
 import { useAuthStore } from "@/Store/auth";
+import { useTranslations } from "next-intl";
+import LanguageSwitcher from "@/Components/LanguageSwitcher";
 
 function Header() {
-  const { user } = useAuthStore(); // ← ดึง user จาก store
+  const { user } = useAuthStore();
+  const tCommon = useTranslations("common");
 
   return (
     <header
@@ -40,12 +43,20 @@ function Header() {
             color: "white",
           }}
         >
-          AxionSync
+          {tCommon("appName")}
         </h1>
       </div>
 
-      {/* ขวา: ชื่อผู้ใช้ */}
-      <div style={{ display: "flex", alignItems: "center", color: "white" }}>
+      {/* ขวา: Language Switcher + ชื่อผู้ใช้ */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          color: "white",
+          gap: 12,
+        }}
+      >
+        <LanguageSwitcher />
         {user ? (
           <span
             style={{
@@ -66,7 +77,7 @@ function Header() {
               color: "white",
             }}
           >
-            Admin Users
+            {tCommon("adminUsers")}
           </span>
         )}
       </div>

@@ -1,0 +1,12 @@
+{
+  "title": "Main Menu - Users",
+  "headers": {
+    "id": "ID",
+    "username": "Username",
+    "firstname": "Firstname",
+    "lastname": "Lastname",
+    "nickname": "Nickname",
+    "role": "Role",
+    "tel": "Tel"
+  }
+}

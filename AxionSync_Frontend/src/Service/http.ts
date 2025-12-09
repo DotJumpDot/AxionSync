@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useAuthStore } from "@/Store/auth";
 
 const instance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_BASE_URL,
@@ -23,10 +24,9 @@ instance.interceptors.request.use((config) => {
     }
   }
   if (apiKey) {
-    config.headers = {
-      ...(config.headers || {}),
-      "X-API-KEY": apiKey,
-    } as any;
+    if (config.headers) {
+      (config.headers as Record<string, string>)["X-API-KEY"] = apiKey;
+    }
   }
 
   try {
@@ -37,10 +37,11 @@ instance.interceptors.request.use((config) => {
       const token: string | undefined = state?.token;
       const expiresAt: number | undefined = state?.tokenExpiresAt;
       if (token && expiresAt && Date.now() < expiresAt) {
-        config.headers = {
-          ...(config.headers || {}),
-          Authorization: `Bearer ${token}`,
-        } as any;
+        if (config.headers) {
+          (config.headers as Record<string, string>)[
+            "Authorization"
+          ] = `Bearer ${token}`;
+        }
       }
     }
   } catch {
@@ -50,13 +51,13 @@ instance.interceptors.request.use((config) => {
 });
 
 // Handle 401 responses by clearing auth and redirecting to login
+
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error?.response?.status === 401) {
       // Clear auth state and redirect to login
       try {
-        const { useAuthStore } = require("@/Store/auth");
         const store = useAuthStore.getState();
         store.logout();
       } catch {

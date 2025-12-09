@@ -1,11 +1,25 @@
 type User = {
   id: number;
   username: string;
-  firstname: string;
-  lastname: string;
-  nickname: string;
+  firstname: string | null;
+  lastname: string | null;
+  nickname: string | null;
   role: string;
-  tel: string;
+  tel: string | null;
+  picture_url: string;
 };
 
-export type { User };
+type UserUpdate = {
+  firstname?: string | null;
+  lastname?: string | null;
+  nickname?: string | null;
+  tel?: string | null;
+};
+
+type UserPictureResponse = {
+  success: boolean;
+  picture_url: string;
+  user: User;
+};
+
+export type { User, UserUpdate, UserPictureResponse };

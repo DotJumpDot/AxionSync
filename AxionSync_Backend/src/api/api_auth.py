@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Header, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
 from src.models.entity.en_user import User
 from src.models.function.ft_auth import LoginRequest
 from src.services.sv_auth import AuthService
@@ -11,6 +12,10 @@ import json
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 sv_auth = AuthService()
+
+# Security schemes - these integrate with Swagger UI "Authorize" button
+bearer_scheme = HTTPBearer(auto_error=False, scheme_name="bearerAuth")
+api_key_scheme = APIKeyHeader(name="X-API-KEY", auto_error=False, scheme_name="apiKey")
 
 
 # ===========================
@@ -47,15 +52,15 @@ def _jwt_key():
 
 
 def require_bearer(
-    authorization: str | None = Header(default=None, alias="Authorization")
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     """Dependency to extract and verify JWT, return claims with user info"""
-    if not authorization or not authorization.startswith("Bearer "):
+    if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid Authorization header",
         )
-    token_str = authorization[7:]
+    token_str = credentials.credentials
     try:
         key = _jwt_key()
         verified = jwt.JWT(key=key, jwt=token_str)
@@ -73,10 +78,18 @@ def require_bearer(
         )
 
 
+def require_api_key(x_api_key: str | None = Depends(api_key_scheme)):
+    """Dependency to verify API key for public endpoints like registration"""
+    allowed_keys = _parse_api_keys(os.getenv("X_API_KEY"))
+    if not allowed_keys or (x_api_key not in allowed_keys):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key"
+        )
+    return True
+
+
 @router.post("/login")
-def login(
-    req: LoginRequest, x_api_key: str | None = Header(default=None, alias="X-API-KEY")
-):
+def login(req: LoginRequest, x_api_key: str | None = Depends(api_key_scheme)):
     allowed_keys = _parse_api_keys(os.getenv("X_API_KEY"))
     if not allowed_keys or (x_api_key not in allowed_keys):
         raise HTTPException(

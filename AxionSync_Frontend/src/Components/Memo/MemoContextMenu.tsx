@@ -1,20 +1,27 @@
-import React from "react";
+"use client";
+
 import type { Memo } from "@/Types/Memo";
 
-interface MemoContextMenuProps {
+type MemoContextMenuProps = {
   memo: Memo;
-  isOpen: boolean;
+  isEditing: boolean;
+  isOpen?: boolean;
   onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
   onCollect?: () => void;
   onUncollect?: () => void;
   onDelete: () => void;
-  onClose: () => void;
-}
+  onClose?: () => void;
+};
 
 export default function MemoContextMenu({
   memo,
-  isOpen,
+  isEditing,
+  isOpen = true,
   onEdit,
+  onSave,
+  onCancel,
   onCollect,
   onUncollect,
   onDelete,
@@ -25,92 +32,143 @@ export default function MemoContextMenu({
 
   return (
     <div
+      onClick={(e) => e.stopPropagation()}
       style={{
         position: "absolute",
-        right: 0,
-        top: "100%",
-        backgroundColor: "#18191c",
+        bottom: "-30px",
+        right: "40px",
+        backgroundColor: "#2f3136",
+        border: "1px solid #202225",
         borderRadius: "4px",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.5)",
+        minWidth: "120px",
         zIndex: 1000,
-        minWidth: "150px",
+        boxShadow: "0 8px 16px rgba(0,0,0,0.3)",
       }}
-      onClick={(e) => e.stopPropagation()}
     >
-      <div
-        onClick={onEdit}
-        style={{
-          padding: "8px 12px",
-          cursor: "pointer",
-          color: "#dcddde",
-          fontSize: "14px",
-          borderBottom: "1px solid #2f3136",
-        }}
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.backgroundColor = "#5865f2")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.backgroundColor = "transparent")
-        }
-      >
-        ✏️ Edit
-      </div>
-      {!memo.collected && onCollect ? (
-        <div
-          onClick={onCollect}
-          style={{
-            padding: "8px 12px",
-            cursor: "pointer",
-            color: "#dcddde",
-            fontSize: "14px",
-            borderBottom: "1px solid #2f3136",
+      {!isEditing && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.backgroundColor = "#43b581")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.backgroundColor = "transparent")
-          }
-        >
-          ✓ Collect
-        </div>
-      ) : onUncollect ? (
-        <div
-          onClick={onUncollect}
           style={{
+            display: "block",
+            width: "100%",
+            textAlign: "left",
             padding: "8px 12px",
-            cursor: "pointer",
+            backgroundColor: "transparent",
+            border: "none",
             color: "#dcddde",
+            cursor: "pointer",
             fontSize: "14px",
-            borderBottom: "1px solid #2f3136",
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.backgroundColor = "#faa61a")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.backgroundColor = "transparent")
-          }
         >
-          ↶ Uncollect
-        </div>
-      ) : null}
-      <div
-        onClick={onDelete}
+          Edit
+        </button>
+      )}
+      {isEditing && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSave();
+            }}
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              padding: "8px 12px",
+              backgroundColor: "transparent",
+              border: "none",
+              color: "#43b581",
+              cursor: "pointer",
+              fontSize: "14px",
+            }}
+          >
+            Save
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancel();
+            }}
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              padding: "8px 12px",
+              backgroundColor: "transparent",
+              border: "none",
+              color: "#f04747",
+              cursor: "pointer",
+              fontSize: "14px",
+            }}
+          >
+            Cancel
+          </button>
+        </>
+      )}
+      {!memo.collected && onCollect && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onCollect();
+          }}
+          style={{
+            display: "block",
+            width: "100%",
+            textAlign: "left",
+            padding: "8px 12px",
+            backgroundColor: "transparent",
+            border: "none",
+            color: "#dcddde",
+            cursor: "pointer",
+            fontSize: "14px",
+          }}
+        >
+          Collect
+        </button>
+      )}
+      {memo.collected && onUncollect && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onUncollect();
+          }}
+          style={{
+            display: "block",
+            width: "100%",
+            textAlign: "left",
+            padding: "8px 12px",
+            backgroundColor: "transparent",
+            border: "none",
+            color: "#dcddde",
+            cursor: "pointer",
+            fontSize: "14px",
+          }}
+        >
+          Uncollect
+        </button>
+      )}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
         style={{
+          display: "block",
+          width: "100%",
+          textAlign: "left",
           padding: "8px 12px",
+          backgroundColor: "transparent",
+          border: "none",
+          color: "#f04747",
           cursor: "pointer",
-          color: "#dcddde",
           fontSize: "14px",
         }}
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.backgroundColor = "#ed4245")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.backgroundColor = "transparent")
-        }
       >
-        🗑️ Delete
-      </div>
+        Delete
+      </button>
     </div>
   );
 }

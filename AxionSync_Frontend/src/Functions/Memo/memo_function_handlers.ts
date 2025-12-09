@@ -2,7 +2,7 @@ import type { Memo } from "@/Types/Memo";
 import type { UpdateTabRequest, CreateTabRequest } from "@/Types/Tab";
 
 type ApiResult<T = void> = { success: boolean; message?: string; tab?: T };
-type NotificationType = "success" | "error" | "info" | "warning";
+type NotificationType = "error" | "info" | "warning";
 type ShowNotification = (
   msg: string,
   type?: NotificationType,
@@ -17,9 +17,11 @@ export const handleMemoSend = async (
     title: string;
     content: string;
     tab_id?: number;
+    font_color?: string;
   }) => Promise<ApiResult>,
   showNotification: ShowNotification,
-  onSuccess: () => void
+  onSuccess: () => void,
+  messages?: { error: string }
 ) => {
   if (!input.trim()) return;
   const result = await createMemo({
@@ -28,10 +30,12 @@ export const handleMemoSend = async (
     tab_id: currentTabId ?? undefined,
   });
   if (result.success) {
-    showNotification("Memo sent!", "success");
     onSuccess();
   } else {
-    showNotification(result.message || "Failed to send memo", "error");
+    showNotification(
+      result.message || messages?.error || "Failed to send memo",
+      "error"
+    );
   }
 };
 
@@ -39,14 +43,17 @@ export const handleMemoDelete = async (
   id: number,
   deleteMemo: (id: number) => Promise<ApiResult>,
   showNotification: ShowNotification,
-  onSuccess: (id: number) => void
+  onSuccess: (id: number) => void,
+  messages?: { error: string }
 ) => {
   const result = await deleteMemo(id);
-  if (result.success) {
-    showNotification("Memo deleted", "success");
-    onSuccess(id);
+  if (!result.success) {
+    showNotification(
+      result.message || messages?.error || "Failed to delete",
+      "error"
+    );
   } else {
-    showNotification(result.message || "Failed to delete", "error");
+    onSuccess(id);
   }
 };
 
@@ -54,14 +61,17 @@ export const handleMemoCollect = async (
   id: number,
   collectMemo: (id: number) => Promise<ApiResult>,
   showNotification: ShowNotification,
-  onSuccess: () => void
+  onSuccess: () => void,
+  messages?: { error: string }
 ) => {
   const result = await collectMemo(id);
-  if (result.success) {
-    showNotification("Memo collected!", "success");
-    onSuccess();
+  if (!result.success) {
+    showNotification(
+      result.message || messages?.error || "Failed to collect",
+      "error"
+    );
   } else {
-    showNotification(result.message || "Failed to collect", "error");
+    onSuccess();
   }
 };
 
@@ -69,14 +79,17 @@ export const handleMemoUncollect = async (
   id: number,
   uncollectMemo: (id: number) => Promise<ApiResult>,
   showNotification: ShowNotification,
-  onSuccess: () => void
+  onSuccess: () => void,
+  messages?: { error: string }
 ) => {
   const result = await uncollectMemo(id);
-  if (result.success) {
-    showNotification("Memo uncollected!", "success");
-    onSuccess();
+  if (!result.success) {
+    showNotification(
+      result.message || messages?.error || "Failed to uncollect",
+      "error"
+    );
   } else {
-    showNotification(result.message || "Failed to uncollect", "error");
+    onSuccess();
   }
 };
 
@@ -89,15 +102,18 @@ export const handleMemoUpdate = async (
     data: { title: string; content: string }
   ) => Promise<ApiResult>,
   showNotification: ShowNotification,
-  onSuccess: () => void
+  onSuccess: () => void,
+  messages?: { error: string }
 ) => {
   if (!content.trim()) return;
   const result = await updateMemo(id, { title, content });
-  if (result.success) {
-    showNotification("Memo updated!", "success");
-    onSuccess();
+  if (!result.success) {
+    showNotification(
+      result.message || messages?.error || "Failed to update",
+      "error"
+    );
   } else {
-    showNotification(result.message || "Failed to update", "error");
+    onSuccess();
   }
 };
 
@@ -108,17 +124,19 @@ export const handleMemoColorUpdate = async (
     id: number,
     data: { title: string; content: string; font_color?: string }
   ) => Promise<ApiResult>,
-  showNotification: ShowNotification
+  showNotification: ShowNotification,
+  messages?: { error: string }
 ) => {
   const res = await updateMemo(memo.id, {
     title: memo.title,
     content: memo.content,
     font_color: fontColor ?? undefined,
   });
-  if (res.success) {
-    showNotification("Color updated", "success");
-  } else {
-    showNotification(res.message || "Failed to update", "error");
+  if (!res.success) {
+    showNotification(
+      res.message || messages?.error || "Failed to update",
+      "error"
+    );
   }
 };
 
@@ -127,14 +145,17 @@ export const handleTabUpdate = async (
   data: UpdateTabRequest,
   updateTab: (id: number, data: UpdateTabRequest) => Promise<ApiResult>,
   showNotification: ShowNotification,
-  onSuccess: () => void
+  onSuccess: () => void,
+  messages?: { error: string }
 ) => {
   const res = await updateTab(tabId, data);
-  if (res.success) {
-    showNotification("Tab updated", "success");
-    onSuccess();
+  if (!res.success) {
+    showNotification(
+      res.message || messages?.error || "Failed to update tab",
+      "error"
+    );
   } else {
-    showNotification(res.message || "Failed to update tab", "error");
+    onSuccess();
   }
 };
 
@@ -142,13 +163,16 @@ export const handleTabCreate = async (
   data: CreateTabRequest,
   createTab: (data: CreateTabRequest) => Promise<ApiResult<{ id: number }>>,
   showNotification: ShowNotification,
-  onSuccess: (tabId: number) => void
+  onSuccess: (tabId: number) => void,
+  messages?: { error: string }
 ) => {
   const res = await createTab(data);
-  if (res.success && res.tab) {
-    showNotification("Tab created", "success");
+  if (!res.success) {
+    showNotification(
+      res.message || messages?.error || "Failed to create tab",
+      "error"
+    );
+  } else if (res.tab) {
     onSuccess(res.tab.id);
-  } else {
-    showNotification(res.message || "Failed to create tab", "error");
   }
 };

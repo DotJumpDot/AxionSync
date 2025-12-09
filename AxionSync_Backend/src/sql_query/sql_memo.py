@@ -11,7 +11,7 @@ class SQLMemo:
             self.db.cursor.execute(
                 """
                 SELECT m.id, m.title, m.content, m.user_id, m.tab_id, m.font_color, m.deleted_status, m.collected, m.collected_time, m.created_at, m.updated_at,
-                       u.id, u.username, u.firstname, u.lastname, u.nickname, u.role, u.tel, u.created_at
+                       u.id, u.username, u.firstname, u.lastname, u.nickname, u.role, u.tel, u.created_at, u.picture_url
                 FROM memo m
                 INNER JOIN "user" u ON m.user_id = u.id
                 WHERE m.user_id = %s AND m.tab_id = %s AND m.deleted_status = FALSE
@@ -24,7 +24,7 @@ class SQLMemo:
             self.db.cursor.execute(
                 """
                 SELECT m.id, m.title, m.content, m.user_id, m.tab_id, m.font_color, m.deleted_status, m.collected, m.collected_time, m.created_at, m.updated_at,
-                       u.id, u.username, u.firstname, u.lastname, u.nickname, u.role, u.tel, u.created_at
+                       u.id, u.username, u.firstname, u.lastname, u.nickname, u.role, u.tel, u.created_at, u.picture_url
                 FROM memo m
                 INNER JOIN "user" u ON m.user_id = u.id
                 WHERE m.user_id = %s AND m.deleted_status = FALSE
@@ -40,7 +40,7 @@ class SQLMemo:
         self.db.cursor.execute(
             """
             SELECT m.id, m.title, m.content, m.user_id, m.tab_id, m.font_color, m.deleted_status, m.collected, m.collected_time, m.created_at, m.updated_at,
-                   u.id, u.username, u.firstname, u.lastname, u.nickname, u.role, u.tel, u.created_at
+                   u.id, u.username, u.firstname, u.lastname, u.nickname, u.role, u.tel, u.created_at, u.picture_url
             FROM memo m
             INNER JOIN "user" u ON m.user_id = u.id
             WHERE m.id = %s AND m.deleted_status = FALSE;

@@ -1,0 +1,71 @@
+{
+  "tabs": {
+    "collected": "เมโมที่เก็บไว้",
+    "details": "รายละเอียดเมโม"
+  },
+  "fields": {
+    "fontColor": "สีตัวอักษร",
+    "author": "ผู้เขียน",
+    "created": "สร้างเมื่อ",
+    "updated": "อัปเดต",
+    "collected": "เก็บเมื่อ",
+    "content": "เนื้อหา"
+  },
+  "modal": {
+    "titleCreate": "สร้างแท็บใหม่",
+    "titleEdit": "แก้ไขแท็บ",
+    "tabName": "ชื่อแท็บ",
+    "color": "สี",
+    "fontName": "ชื่อฟอนต์",
+    "fontSize": "ขนาดฟอนต์"
+  },
+  "empty": {
+    "selectMemo": "คลิกเมโมเพื่อดูรายละเอียด",
+    "noCollected": "ยังไม่มีเมโมที่เก็บไว้"
+  },
+  "sidebar": {
+    "tabPrefix": "แท็บ: {name}",
+    "noTab": "ยังไม่ได้เลือกแท็บ"
+  },
+  "actions": {
+    "saveColor": "บันทึกสี",
+    "setDefault": "ตั้งเป็นสีเริ่มต้น",
+    "applyAll": "ใช้กับทุกเมโม",
+    "applyColorTitle": "ใช้สีกับทุกเมโม",
+    "applyColorContent": "ต้องการใช้สี \"{color}\" กับทุกเมโมในแท็บนี้หรือไม่",
+    "apply": "ยืนยัน",
+    "deleteTitle": "ลบเมโม",
+    "deleteContent": "คุณแน่ใจหรือไม่ว่าต้องการลบเมโมนี้"
+  },
+  "messages": {
+    "sent": "ส่งเมโมแล้ว!",
+    "sendFailed": "ส่งเมโมไม่สำเร็จ",
+    "colorApplied": "ใช้สีกับทุกเมโมแล้ว",
+    "colorFailed": "ใช้สีไม่สำเร็จ",
+    "defaultColorSet": "ตั้งค่าสีเริ่มต้นให้เมโมใหม่แล้ว",
+    "deleteSuccess": "ลบเมโมแล้ว",
+    "deleteFail": "ลบเมโมไม่สำเร็จ",
+    "collectSuccess": "เก็บเมโมแล้ว!",
+    "collectFail": "เก็บเมโมไม่สำเร็จ",
+    "uncollectSuccess": "ยกเลิกการเก็บเมโมแล้ว!",
+    "uncollectFail": "ยกเลิกการเก็บเมโมไม่สำเร็จ",
+    "updateSuccess": "อัปเดตเมโมแล้ว!",
+    "updateFail": "อัปเดตเมโมไม่สำเร็จ",
+    "colorUpdateSuccess": "อัปเดตสีแล้ว",
+    "colorUpdateFail": "อัปเดตสีไม่สำเร็จ",
+    "tabUpdateSuccess": "อัปเดตแท็บแล้ว",
+    "tabUpdateFail": "อัปเดตแท็บไม่สำเร็จ",
+    "tabCreateSuccess": "สร้างแท็บแล้ว",
+    "tabCreateFail": "สร้างแท็บไม่สำเร็จ"
+  },
+  "input": {
+    "placeholder": "# ข้อความ"
+  },
+  "header": {
+    "editHint": "คลิกเพื่อเปลี่ยนชื่อช่อง",
+    "editTab": "แก้ไขแท็บ",
+    "createTab": "สร้างแท็บ",
+    "defaultName": "memo-notes"
+  },
+  "collectedBy": "โดย {username}"
+}

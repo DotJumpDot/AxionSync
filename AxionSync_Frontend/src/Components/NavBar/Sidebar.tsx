@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import {
   IconGauge,
   IconFingerprint,
@@ -9,6 +10,7 @@ import {
   IconLogout,
   IconChevronRight,
   IconClock,
+  IconReport,
 } from "@tabler/icons-react";
 import { Box, NavLink, Divider } from "@mantine/core";
 import { useAuthStore } from "@/Store/auth";
@@ -36,6 +38,7 @@ const data = [
 
 export default function Sidebar() {
   const router = useRouter();
+  const locale = useLocale();
   const { logout } = useAuthStore();
   const [active, setActive] = useState(0);
   const [dateTime, setDateTime] = useState("");
@@ -152,8 +155,9 @@ export default function Sidebar() {
               }
               onClick={() => {
                 setActive(index);
-                if (item.label === "Main Menu") router.push("/mainmenu");
-                if (item.label === "Memo") router.push("/memo");
+                if (item.label === "Main Menu")
+                  router.push(`/${locale}/mainmenu`);
+                if (item.label === "Memo") router.push(`/${locale}/memo`);
               }}
               color="orange"
               styles={{
@@ -183,8 +187,35 @@ export default function Sidebar() {
         })}
       </div>
 
-      {/* Logout */}
+      {/* profile */}
       <div style={{ padding: "0px", marginBottom: "0px" }}>
+        <NavLink
+          active
+          variant="subtle"
+          label="Profile"
+          leftSection={<IconReport size={26} stroke={1.5} />}
+          color="#1900ff"
+          onClick={() => router.push(`/${locale}/profile`)}
+          styles={{
+            root: {
+              height: 80,
+              borderRadius: 0,
+              paddingLeft: 16,
+              paddingRight: 16,
+              transition: "0.2s",
+              cursor: "pointer",
+              "&:hover": {
+                backgroundColor: "#ffe5e5",
+                color: "red",
+              },
+            },
+            label: {
+              fontSize: "1rem",
+              fontWeight: 450,
+            },
+          }}
+        />
+        {/* Logout */}
         <NavLink
           active
           variant="subtle"

@@ -21,6 +21,7 @@ class MemoService:
                 nickname=row[15],
                 role=row[16],
                 tel=row[17],
+                picture_url=row[19] or "unidentified.jpg",
                 created_at=row[18],
             )
             memos.append(

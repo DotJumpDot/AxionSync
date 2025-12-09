@@ -2,43 +2,49 @@
 
 import { useEffect } from "react";
 import { useUserStore } from "@/Store/user";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function MainmenuPage() {
   const { users, loading, getUsers } = useUserStore();
-  const router = useRouter();
+  const t = useTranslations("mainmenu.headers");
+  const tPage = useTranslations("mainmenu");
 
   useEffect(() => {
-    getUsers(); // โหลด users ตอน mount
+    getUsers();
   }, [getUsers]);
 
   return (
     <div>
-      {/* Global Loading */}
       {loading && (
         <div className="global-loading">
           <div className="global-spinner" />
         </div>
       )}
-      <h1>Main Menu - Users</h1>
+      <h1>{tPage("title")}</h1>
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>ID</th>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-              Username
+              {t("id")}
             </th>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-              Firstname
+              {t("username")}
             </th>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-              Lastname
+              {t("firstname")}
             </th>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-              Nickname
+              {t("lastname")}
             </th>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Role</th>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Tel</th>
+            <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+              {t("nickname")}
+            </th>
+            <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+              {t("role")}
+            </th>
+            <th style={{ border: "1px solid #ccc", padding: "8px" }}>
+              {t("tel")}
+            </th>
           </tr>
         </thead>
         <tbody>

@@ -6,7 +6,7 @@ from src.api.api_auth import require_bearer
 from pydantic import BaseModel
 from datetime import datetime, timezone
 
-router = APIRouter(prefix="/memos", tags=["Memos"])
+router = APIRouter(prefix="/memos", tags=["Memo"])
 sv_memo = MemoService()
 
 

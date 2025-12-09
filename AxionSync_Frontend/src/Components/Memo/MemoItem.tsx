@@ -1,6 +1,9 @@
+"use client";
+
 import type { Memo } from "@/Types/Memo";
 import type { Tab } from "@/Types/Tab";
 import MemoContextMenu from "./MemoContextMenu";
+import { useTranslations } from "next-intl";
 
 interface MemoItemProps {
   memo: Memo;
@@ -47,6 +50,8 @@ export default function MemoItem({
   onDelete,
   onMenuClose,
 }: MemoItemProps) {
+  const tCommon = useTranslations("common");
+
   return (
     <div
       style={{
@@ -54,7 +59,6 @@ export default function MemoItem({
         borderRadius: "4px",
         backgroundColor: isSelected ? "#40444b" : "transparent",
         cursor: "pointer",
-        transition: "background-color 0.2s",
         position: "relative",
       }}
       onMouseEnter={() => onHoverChange(true)}
@@ -112,7 +116,7 @@ export default function MemoItem({
                     fontWeight: 600,
                   }}
                 >
-                  • COLLECTED
+                  • {tCommon("collected")}
                 </span>
               )}
             </div>
@@ -152,7 +156,7 @@ export default function MemoItem({
                     fontSize: 12,
                   }}
                 >
-                  Save
+                  {tCommon("save")}
                 </button>
                 <button
                   onClick={onEditCancel}
@@ -166,7 +170,7 @@ export default function MemoItem({
                     fontSize: 12,
                   }}
                 >
-                  Cancel
+                  {tCommon("cancel")}
                 </button>
               </div>
             </div>
@@ -204,8 +208,11 @@ export default function MemoItem({
             </div>
             <MemoContextMenu
               memo={memo}
+              isEditing={isEditing}
               isOpen={openMenuId === memo.id}
               onEdit={onEdit}
+              onSave={onEditSave}
+              onCancel={onEditCancel}
               onCollect={onCollect}
               onUncollect={onUncollect}
               onDelete={onDelete}
