@@ -22,8 +22,8 @@ export const useNotification = () => {
     notification[type]({
       title: type.charAt(0).toUpperCase() + type.slice(1),
       description: msg,
-      placement,
-      duration,
+      placement: placement,
+      duration: duration,
     });
   };
 

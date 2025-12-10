@@ -7,6 +7,8 @@ from src.api.api_user import router as api_user
 from src.api.api_auth import router as api_auth
 from src.api.api_memo import router as api_memo
 from src.api.api_tab import router as api_tab
+from src.api.api_bookmark import router as api_bookmark
+from src.api.api_tag import router as api_tag
 
 from dotenv import load_dotenv
 import os
@@ -41,6 +43,8 @@ app.include_router(api_user)
 app.include_router(api_auth)
 app.include_router(api_memo)
 app.include_router(api_tab)
+app.include_router(api_bookmark)
+app.include_router(api_tag)
 
 
 ####################################################################################

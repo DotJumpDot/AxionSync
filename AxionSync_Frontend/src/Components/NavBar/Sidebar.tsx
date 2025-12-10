@@ -11,6 +11,7 @@ import {
   IconChevronRight,
   IconClock,
   IconReport,
+  IconBookmark,
 } from "@tabler/icons-react";
 import { Box, NavLink, Divider } from "@mantine/core";
 import { useAuthStore } from "@/Store/auth";
@@ -31,6 +32,12 @@ const data = [
   {
     icon: IconActivity,
     label: "Memo",
+    description: "",
+    rightSection: <IconChevronRight size={16} stroke={1.5} />,
+  },
+  {
+    icon: IconBookmark,
+    label: "Bookmark",
     description: "",
     rightSection: <IconChevronRight size={16} stroke={1.5} />,
   },
@@ -158,6 +165,8 @@ export default function Sidebar() {
                 if (item.label === "Main Menu")
                   router.push(`/${locale}/mainmenu`);
                 if (item.label === "Memo") router.push(`/${locale}/memo`);
+                if (item.label === "Bookmark")
+                  router.push(`/${locale}/bookmark`);
               }}
               color="orange"
               styles={{

@@ -292,6 +292,33 @@ VALUES
     ('Memo', 'Hello world!', 1, 1, NULL),
     ('Memo', 'Bug: cannot login', 1, 2, '#FFAA00'),
     ('Memo', 'New idea: add themes', 1, 3, NULL);
+
+-- Create sample tags
+INSERT INTO tag (name, tag_priority) VALUES
+    ('Action', 1),
+    ('Romance', 2),
+    ('Fantasy', 3),
+    ('Comedy', 4)
+RETURNING id;
+-- Assume tag ids 1,2,3,4
+
+-- Create sample bookmarks
+INSERT INTO bookmark (name, type, user_id, status, public, created_at)
+VALUES
+    ('One Piece', 'Anime', 1, 'onGoing', true, NOW()),
+    ('The Witcher', 'Game', 1, 'Finished', false, NOW()),
+    ('Your Name', 'Movie', 1, 'Finished', true, NOW())
+RETURNING id;
+-- Assume bookmark ids 1,2,3
+
+-- Create sample bookmark_tag relations
+INSERT INTO bookmark_tag (bookmark_id, tag_id) VALUES
+    (1, 1), -- One Piece: Action
+    (1, 3), -- One Piece: Fantasy
+    (2, 1), -- Witcher: Action
+    (2, 3), -- Witcher: Fantasy
+    (3, 2), -- Your Name: Romance
+    (3, 4); -- Your Name: Comedy
 ```
 
 ## Database Constraints & Relationships
@@ -428,3 +455,392 @@ VALUES (
     NOW()
 ) RETURNING *;
 ```
+
+---
+
+
+## Bookmark Feature
+
+### Tag Entity
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | SERIAL | No | Primary key, auto-incremented |
+| name | VARCHAR(100) | No | Unique tag name |
+| tag_priority | INTEGER | No | Priority for ordering (default: 0) |
+
+### Bookmark Entity
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | SERIAL | No | Primary key, auto-incremented |
+| name | VARCHAR(255) | No | Name of the bookmark item |
+| type | VARCHAR(50) | No | Type enum: Game, Movie, Novel, Manga, Manhwa, Anime, Series |
+| review | TEXT | Yes | Full review text |
+| watch_from | JSON | Yes | Source info: `{"siteName": "Netflix", "siteURL": "https://..."}` |
+| release_time | TIMESTAMP | Yes | Release date of the content |
+| time_used | INTEGER | Yes | Time spent in minutes |
+| rating | DECIMAL(3,1) | Yes | Overall rating 0-10 |
+| story_rating | DECIMAL(3,1) | Yes | Story rating 0-10 |
+| action_rating | DECIMAL(3,1) | Yes | Action rating 0-10 |
+| graphic_rating | DECIMAL(3,1) | Yes | Graphics/visuals rating 0-10 |
+| sound_rating | DECIMAL(3,1) | Yes | Sound/music rating 0-10 |
+| chapter | VARCHAR(100) | Yes | Current chapter/episode |
+| mood | JSON | Yes | **Array of mood strings** (max 5): `["happy", "excited"]` |
+| review_version | INTEGER | No | **Auto-managed version number** (default: 1, auto-increments on update) |
+| short_review | TEXT | Yes | Brief summary review |
+| status | VARCHAR(50) | No | Status enum: onGoing, Finished, PreWatch, Dropped |
+| public | BOOLEAN | No | Whether bookmark is public (default: false) |
+| user_id | INTEGER | No | FK to user.id |
+| created_at | TIMESTAMP | No | Creation timestamp |
+| updated_at | TIMESTAMP | Yes | Last update timestamp |
+| cover_image | VARCHAR(255) | Yes | Cover image filename |
+| deleted_status | BOOLEAN | No | Soft delete flag (default: false) |
+| last_viewed_at | TIMESTAMP | Yes | Last time user viewed this bookmark |
+
+### bookmark_tag (Junction Table)
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| bookmark_id | INTEGER | No | FK to bookmark.id |
+| tag_id | INTEGER | No | FK to tag.id |
+| PRIMARY KEY | (bookmark_id, tag_id) | - | Composite primary key |
+
+### Valid Mood Values (22 options)
+```
+happy, sad, excited, boring, fun, serious, mind-blown,
+emotional, heartwarming, tragic, thrilling, suspenseful, scary,
+satisfied, unsatisfied, disappointed, impressed, addicted,
+confusing, thought-provoking, deep, chill, feel-good
+```
+
+### Type-Based Field Visibility
+Different bookmark types show different rating fields:
+| Type | Available Fields |
+|------|-----------------|
+| Game | rating, story_rating, action_rating, graphic_rating, sound_rating, time_used, chapter, mood |
+| Movie | rating, story_rating, action_rating, graphic_rating, sound_rating, time_used, mood |
+| Novel | rating, story_rating, chapter, mood |
+| Manga | rating, story_rating, graphic_rating, chapter, mood |
+| Manhwa | rating, story_rating, graphic_rating, chapter, mood |
+| Anime | rating, story_rating, action_rating, graphic_rating, sound_rating, chapter, mood |
+| Series | rating, story_rating, action_rating, graphic_rating, sound_rating, chapter, mood |
+
+### Notes
+- **Bookmark Types**: Game, Movie, Novel, Manga, Manhwa, Anime, Series
+- **Bookmark Status**: onGoing (currently watching/reading), Finished, PreWatch (planned), Dropped
+- **Rating Scale**: All ratings are from 0.0 to 10.0
+- **watch_from**: JSON field with structure `{"siteName": string, "siteURL"?: string}`
+- **mood**: JSON array storing up to 5 mood strings from the valid mood list
+- **review_version**: Integer that starts at 1 on creation and auto-increments on each update (not user-editable)
+- **Soft Delete**: Uses `deleted_status` flag, similar to memo pattern
+- **Many-to-Many Tags**: A bookmark can have multiple tags, a tag can be on multiple bookmarks
+
+---
+
+## Bookmark SQL Schema Creation Scripts
+
+### 5. Create Tag Table
+```sql
+CREATE TABLE IF NOT EXISTS tag (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    tag_priority INTEGER NOT NULL DEFAULT 0
+);
+
+-- Create index on tag name for fast lookups
+CREATE INDEX IF NOT EXISTS idx_tag_name ON tag(name);
+```
+
+### 6. Create Bookmark Table
+```sql
+CREATE TABLE IF NOT EXISTS bookmark (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('Game', 'Movie', 'Novel', 'Manga', 'Manhwa', 'Anime', 'Series')),
+    review TEXT,
+    watch_from JSON,
+    release_time TIMESTAMP WITH TIME ZONE,
+    time_used INTEGER,
+    rating DECIMAL(3,1) CHECK (rating >= 0 AND rating <= 10),
+    story_rating DECIMAL(3,1) CHECK (story_rating >= 0 AND story_rating <= 10),
+    action_rating DECIMAL(3,1) CHECK (action_rating >= 0 AND action_rating <= 10),
+    graphic_rating DECIMAL(3,1) CHECK (graphic_rating >= 0 AND graphic_rating <= 10),
+    sound_rating DECIMAL(3,1) CHECK (sound_rating >= 0 AND sound_rating <= 10),
+    chapter VARCHAR(100),
+    mood JSON,
+    review_version INTEGER NOT NULL DEFAULT 1,
+    short_review TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'PreWatch' CHECK (status IN ('onGoing', 'Finished', 'PreWatch', 'Dropped')),
+    public BOOLEAN NOT NULL DEFAULT FALSE,
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    cover_image VARCHAR(255),
+    deleted_status BOOLEAN NOT NULL DEFAULT FALSE,
+    last_viewed_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_bookmark_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Create indexes for common queries
+CREATE INDEX IF NOT EXISTS idx_bookmark_user_id ON bookmark(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_type ON bookmark(type);
+CREATE INDEX IF NOT EXISTS idx_bookmark_status ON bookmark(status);
+CREATE INDEX IF NOT EXISTS idx_bookmark_public ON bookmark(public);
+CREATE INDEX IF NOT EXISTS idx_bookmark_created_at ON bookmark(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bookmark_deleted_status ON bookmark(deleted_status);
+CREATE INDEX IF NOT EXISTS idx_bookmark_user_deleted ON bookmark(user_id, deleted_status);
+```
+
+### 7. Create bookmark_tag Junction Table
+```sql
+CREATE TABLE IF NOT EXISTS bookmark_tag (
+    bookmark_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (bookmark_id, tag_id),
+    CONSTRAINT fk_bookmark_tag_bookmark_id FOREIGN KEY (bookmark_id) 
+        REFERENCES bookmark(id) ON DELETE CASCADE,
+    CONSTRAINT fk_bookmark_tag_tag_id FOREIGN KEY (tag_id) 
+        REFERENCES tag(id) ON DELETE CASCADE
+);
+
+-- Create indexes for junction table
+CREATE INDEX IF NOT EXISTS idx_bookmark_tag_bookmark_id ON bookmark_tag(bookmark_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_tag_tag_id ON bookmark_tag(tag_id);
+```
+
+### Migration Script (for existing databases)
+```sql
+-- Migrate mood from VARCHAR to JSON array
+ALTER TABLE bookmark 
+ALTER COLUMN mood TYPE JSON USING 
+  CASE 
+    WHEN mood IS NULL THEN NULL
+    WHEN mood = '' THEN NULL
+    ELSE jsonb_build_array(mood)::json
+  END;
+
+-- Migrate watch_from to new structure
+ALTER TABLE bookmark 
+ALTER COLUMN watch_from TYPE JSON USING 
+  CASE 
+    WHEN watch_from IS NULL THEN NULL
+    WHEN watch_from::text LIKE '%platform%' THEN 
+      json_build_object('siteName', watch_from->>'platform', 'siteURL', watch_from->>'url')
+    ELSE watch_from
+  END;
+
+-- Add review_version if not exists, set to INTEGER
+ALTER TABLE bookmark 
+ALTER COLUMN review_version TYPE INTEGER USING COALESCE(NULLIF(review_version, '')::INTEGER, 1);
+
+ALTER TABLE bookmark 
+ALTER COLUMN review_version SET NOT NULL;
+
+ALTER TABLE bookmark 
+ALTER COLUMN review_version SET DEFAULT 1;
+
+-- Update existing NULL review_versions to 1
+UPDATE bookmark SET review_version = 1 WHERE review_version IS NULL;
+```
+
+---
+
+## Bookmark API Request/Response Models
+
+### CreateBookmarkRequest
+```json
+{
+  "name": "string (required)",
+  "type": "string (required, one of: Game, Movie, Novel, Manga, Manhwa, Anime, Series)",
+  "review": "string (optional)",
+  "watch_from": {
+    "siteName": "string (required if watch_from provided)",
+    "siteURL": "string (optional)"
+  },
+  "release_time": "datetime (optional)",
+  "time_used": "int (optional, minutes)",
+  "rating": "float (optional, 0-10)",
+  "story_rating": "float (optional, 0-10)",
+  "action_rating": "float (optional, 0-10)",
+  "graphic_rating": "float (optional, 0-10)",
+  "sound_rating": "float (optional, 0-10)",
+  "chapter": "string (optional)",
+  "mood": ["string array (optional, max 5, from valid mood list)"],
+  "short_review": "string (optional)",
+  "status": "string (optional, default: 'PreWatch')",
+  "public": "bool (optional, default: false)",
+  "cover_image": "string (optional)",
+  "tag_ids": "[int] (optional, list of tag IDs to associate)"
+}
+```
+**Note:** `review_version` is NOT included - it's auto-set to 1 by the backend.
+
+### UpdateBookmarkRequest
+```json
+{
+  "name": "string (optional)",
+  "type": "string (optional)",
+  "review": "string (optional)",
+  "watch_from": {
+    "siteName": "string",
+    "siteURL": "string (optional)"
+  },
+  "release_time": "datetime (optional)",
+  "time_used": "int (optional)",
+  "rating": "float (optional)",
+  "story_rating": "float (optional)",
+  "action_rating": "float (optional)",
+  "graphic_rating": "float (optional)",
+  "sound_rating": "float (optional)",
+  "chapter": "string (optional)",
+  "mood": ["string array (optional, max 5)"],
+  "short_review": "string (optional)",
+  "status": "string (optional)",
+  "public": "bool (optional)",
+  "cover_image": "string (optional)",
+  "tag_ids": "[int] (optional)"
+}
+```
+**Note:** `review_version` is NOT included - it's auto-incremented by the backend on each update.
+
+### Mood Validation Rules
+- Maximum 5 moods per bookmark
+- Each mood must be from the valid mood list
+- Backend returns 400 error if validation fails
+
+### CreateTagRequest
+```
+name: str (required, unique)
+tag_priority: int (optional, default: 0)
+```
+
+### UpdateTagRequest
+```
+name: str (optional)
+tag_priority: int (optional)
+```
+
+---
+
+## Bookmark API Endpoints
+
+### Tag Endpoints
+
+#### GET /tags/
+Get all tags.
+- **Auth:** Bearer token required
+- **Response:** Array of Tag objects
+
+#### POST /tags/
+Create a new tag.
+- **Auth:** Bearer token required
+- **Body:** CreateTagRequest
+- **Response:** Tag object
+
+#### PUT /tags/{tag_id}
+Update a tag.
+- **Auth:** Bearer token required
+- **Body:** UpdateTagRequest
+- **Response:** Tag object
+
+#### DELETE /tags/{tag_id}
+Delete a tag (hard delete).
+- **Auth:** Bearer token required
+- **Response:** `{ success: true, message: "Tag deleted" }`
+
+### Bookmark Endpoints
+
+#### GET /bookmarks/
+Get all bookmarks for the authenticated user.
+- **Auth:** Bearer token required
+- **Query params:** 
+  - `type` (optional): Filter by type
+  - `status` (optional): Filter by status
+  - `include_deleted` (optional): Include soft-deleted bookmarks
+- **Response:** Array of Bookmark objects with tags and user info
+
+#### GET /bookmarks/{bookmark_id}
+Get a single bookmark by ID.
+- **Auth:** Bearer token required
+- **Response:** Bookmark object with tags and user info
+
+#### POST /bookmarks/
+Create a new bookmark.
+- **Auth:** Bearer token required
+- **Body:** CreateBookmarkRequest
+- **Response:** Bookmark object with tags
+- **Behavior:** Sets `review_version = 1` automatically
+
+#### PUT /bookmarks/{bookmark_id}
+Update a bookmark.
+- **Auth:** Bearer token required
+- **Body:** UpdateBookmarkRequest
+- **Response:** Bookmark object with tags
+- **Behavior:** Auto-increments `review_version` by 1
+
+#### DELETE /bookmarks/{bookmark_id}
+Soft delete a bookmark.
+- **Auth:** Bearer token required
+- **Response:** `{ success: true, message: "Bookmark deleted" }`
+
+#### DELETE /bookmarks/{bookmark_id}/permanent
+Permanently delete a bookmark (hard delete).
+- **Auth:** Bearer token required
+- **Response:** `{ success: true, message: "Bookmark permanently deleted" }`
+
+#### POST /bookmarks/{bookmark_id}/cover
+Upload cover image for a bookmark.
+- **Auth:** Bearer token required
+- **Body:** multipart/form-data with `file` field
+- **Allowed types:** JPEG, PNG, GIF, WebP
+- **Response:** `{ success: true, cover_image: string, bookmark: Bookmark }`
+
+#### PATCH /bookmarks/{bookmark_id}/restore
+Restore a soft-deleted bookmark.
+- **Auth:** Bearer token required
+- **Response:** Bookmark object
+
+#### GET /bookmarks/public
+Get all public bookmarks.
+- **Auth:** Bearer token required
+- **Query params:** `type` (optional)
+- **Response:** Array of public Bookmark objects
+
+#### GET /bookmarks/tag/{tag_id}
+Get bookmarks by tag.
+- **Auth:** Bearer token required
+- **Response:** Array of Bookmark objects with the specified tag
+
+---
+
+## Bookmark Frontend UX Flow
+
+### Create Bookmark Flow
+1. User clicks "Add Bookmark" button
+2. **TypeSelector** opens with blur backdrop showing 7 type cards
+3. User selects a type (Game, Movie, Novel, etc.)
+4. **BookmarkFormModal** opens with:
+   - Type pre-selected (disabled, cannot change)
+   - Collapsible sections: Basic Info, Source, Progress, Ratings, Mood, Reviews, Additional
+   - Only type-relevant fields are shown (e.g., no sound_rating for Novel)
+   - Mood multi-select with max 5 items
+   - Cover image upload with preview
+5. Submit creates bookmark with `review_version = 1`
+
+### Edit Bookmark Flow
+1. User clicks edit on a bookmark card
+2. **BookmarkFormModal** opens directly (no TypeSelector)
+3. Type field is disabled (cannot change type after creation)
+4. All current values pre-filled
+5. Submit auto-increments `review_version`
+
+### Detail View
+1. User clicks on bookmark card to open **BookmarkDetailDrawer**
+2. Shows:
+   - Cover image (if exists)
+   - Type and Status badges
+   - Reviewer info: "Reviewed by {firstname || username}", version number
+   - Type-filtered rating fields
+   - Mood tags (displayed as purple tags)
+   - Watch From with clickable link (if siteURL provided)
+   - Reviews and metadata
+

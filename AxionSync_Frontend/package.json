@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -20,7 +20,7 @@
     "modern-normalize": "^3.0.1",
     "motion": "^12.23.24",
     "next": "16.0.1",
-    "next-intl": "^3.17.2",
+    "next-intl": "^4.5.8",
     "nuqs": "^2.8.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",

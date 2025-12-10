@@ -24,3 +24,7 @@ File → Preferences → Settings  -> files.exclude -> Add Pattern -> **/__pycac
 
 ---------------------Git-----------------------
 git clone -b <branch-name> --single-branch <repository-url>
+
+supabase : wPlMo2ks8SxUdUsL
+
+https://vercel.com/

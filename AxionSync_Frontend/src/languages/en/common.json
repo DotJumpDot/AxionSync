@@ -31,5 +31,6 @@
   "saveChanges": "Save Changes",
   "delete": "Delete",
   "confirmDelete": "Confirm Delete",
-  "deleteConfirmMessage": "Are you sure you want to delete this item? This action cannot be undone."
+  "deleteConfirmMessage": "Are you sure you want to delete this item? This action cannot be undone.",
+  "search": "Search..."
 }
