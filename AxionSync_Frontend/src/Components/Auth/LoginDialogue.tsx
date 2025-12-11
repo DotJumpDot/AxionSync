@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useNotification } from "@/Functions/Notification/useNotification";
 import { useLocale } from "next-intl";
 import { Locale } from "@/languages/config";
+import { usePageLoadingStore } from "@/Store/loading";
 
 function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
   const { showNotification } = useNotification();
@@ -17,8 +18,8 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
 
   const router = useRouter();
   const locale = useLocale();
-  const { login, loading, error, token, tokenExpiresAt, setLocale } =
-    useAuthStore();
+  const { login, token, tokenExpiresAt, setLocale } = useAuthStore();
+  const setPageLoading = usePageLoadingStore((s) => s.setLoading);
 
   // const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -30,18 +31,37 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
 
   // Auto redirect on login success
   useEffect(() => {
-    const valid = !!token && !!tokenExpiresAt && Date.now() < tokenExpiresAt;
-    if (valid) {
-      const timeout = setTimeout(() => {
-        toggleLogin();
-        // Persist locale so other screens (e.g., mainmenu) can pick it up
-        setLocale(locale as Locale);
-
-        router.push(`/${locale}/mainmenu`);
-      }, 150);
-      return () => clearTimeout(timeout);
+    if (!token || !tokenExpiresAt) {
+      console.log("[LOGIN] Waiting for token...", {
+        token: !!token,
+        tokenExpiresAt,
+      });
+      return;
     }
-  }, [token, tokenExpiresAt, locale, router, setLocale, toggleLogin]);
+    if (Date.now() >= tokenExpiresAt) {
+      console.warn("[LOGIN] Token expired", {
+        tokenExpiresAt,
+        now: Date.now(),
+      });
+      return;
+    }
+
+    // Token is valid, redirect immediately without delay
+    console.log("[LOGIN] Token valid, redirecting to mainmenu...", {
+      locale,
+      user: token.substring(0, 20) + "...",
+    });
+
+    // Small timeout to ensure localStorage is synced before navigation
+    const timeout = setTimeout(() => {
+      setLocale(locale as Locale);
+      toggleLogin();
+      router.push(`/${locale}/mainmenu`);
+    }, 50);
+
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, tokenExpiresAt]);
 
   const handleClose = () => {
     setVisible(false);
@@ -62,16 +82,19 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
   //          LOGIN
   // ===========================
   const handleLogin = async () => {
+    setPageLoading(true);
     const request: LoginRequest = { username, password };
 
     const validationError = validateLoginRequest(request);
     if (validationError) {
       showNotice(validationError, "error");
+      setPageLoading(false);
       return;
     }
 
     const result = await login(request);
 
+    setPageLoading(false);
     if (result.success) {
       showNotice("Login Successful. Welcome back!", "success");
       return;
@@ -82,13 +105,6 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
 
   return (
     <div>
-      {/* Global Loading */}
-      {loading && (
-        <div className="global-loading">
-          <div className="global-spinner" />
-        </div>
-      )}
-
       {/* Login Dialog */}
       <div
         style={{
@@ -201,17 +217,6 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
           </div>
 
           {/* Error (optional) */}
-          {error && (
-            <p
-              style={{
-                color: "red",
-                textAlign: "center",
-                marginBottom: "10px",
-              }}
-            >
-              {error}
-            </p>
-          )}
 
           {/* Buttons */}
           <div
@@ -223,7 +228,6 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
           >
             <button
               onClick={handleClose}
-              disabled={loading}
               style={{
                 flex: 1,
                 padding: "10px",
@@ -238,7 +242,6 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
 
             <button
               onClick={handleLogin}
-              disabled={loading}
               style={{
                 flex: 1,
                 padding: "10px",
@@ -247,10 +250,9 @@ function LoginDialogue({ toggleLogin }: { toggleLogin: () => void }) {
                 backgroundColor: "var(--color-primary)",
                 color: "white",
                 cursor: "pointer",
-                opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? "Logging in..." : "Login"}
+              Login
             </button>
           </div>
 

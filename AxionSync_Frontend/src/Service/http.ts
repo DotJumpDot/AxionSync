@@ -33,19 +33,29 @@ instance.interceptors.request.use((config) => {
     const raw = localStorage.getItem("auth-store");
     if (raw) {
       const parsed = JSON.parse(raw);
-      const state = parsed?.state ?? parsed; // persist v4 stores under .state
+      // Zustand persist v4+ stores state under .state
+      const state = parsed?.state ?? parsed;
       const token: string | undefined = state?.token;
       const expiresAt: number | undefined = state?.tokenExpiresAt;
+
       if (token && expiresAt && Date.now() < expiresAt) {
         if (config.headers) {
           (config.headers as Record<string, string>)[
             "Authorization"
           ] = `Bearer ${token}`;
         }
+      } else {
+        console.warn("[HTTP] Token missing, expired, or invalid", {
+          hasToken: !!token,
+          expiresAt,
+          isExpired: expiresAt ? Date.now() >= expiresAt : "N/A",
+        });
       }
+    } else {
+      console.warn("[HTTP] No auth-store found in localStorage");
     }
-  } catch {
-    // ignore storage errors
+  } catch (e) {
+    console.error("[HTTP] Failed to parse auth store:", e);
   }
   return config;
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
 import {
   IconGauge,
@@ -15,6 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { Box, NavLink, Divider } from "@mantine/core";
 import { useAuthStore } from "@/Store/auth";
+import { usePageLoadingStore } from "@/Store/loading";
 
 const data = [
   {
@@ -45,8 +46,10 @@ const data = [
 
 export default function Sidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const locale = useLocale();
   const { logout } = useAuthStore();
+  const setPageLoading = usePageLoadingStore((s) => s.setLoading);
   const [active, setActive] = useState(0);
   const [dateTime, setDateTime] = useState("");
 
@@ -60,6 +63,7 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = () => {
+    setPageLoading(true);
     logout();
     window.location.href = "/";
   };
@@ -162,11 +166,17 @@ export default function Sidebar() {
               }
               onClick={() => {
                 setActive(index);
+                let targetPath = "";
                 if (item.label === "Main Menu")
-                  router.push(`/${locale}/mainmenu`);
-                if (item.label === "Memo") router.push(`/${locale}/memo`);
+                  targetPath = `/${locale}/mainmenu`;
+                if (item.label === "Todo") targetPath = `/${locale}/mainmenu`;
+                if (item.label === "Memo") targetPath = `/${locale}/memo`;
                 if (item.label === "Bookmark")
-                  router.push(`/${locale}/bookmark`);
+                  targetPath = `/${locale}/bookmark`;
+                if (targetPath && pathname !== targetPath) {
+                  setPageLoading(true);
+                  router.push(targetPath);
+                }
               }}
               color="orange"
               styles={{
@@ -204,7 +214,13 @@ export default function Sidebar() {
           label="Profile"
           leftSection={<IconReport size={26} stroke={1.5} />}
           color="#1900ff"
-          onClick={() => router.push(`/${locale}/profile`)}
+          onClick={() => {
+            const targetPath = `/${locale}/profile`;
+            if (pathname !== targetPath) {
+              setPageLoading(true);
+              router.push(targetPath);
+            }
+          }}
           styles={{
             root: {
               height: 80,

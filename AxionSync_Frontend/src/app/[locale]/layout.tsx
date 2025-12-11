@@ -5,6 +5,7 @@ import Providers from "../providers";
 import HeaderWrapper from "@/Components/Header/HeaderWrapper";
 import SiderWrapper from "@/Components/NavBar/SiderWrapper";
 import LayoutWrapper from "../LayoutWrapper";
+import PageLoadingProvider from "@/Components/PageLoadingProvider";
 import { notFound } from "next/navigation";
 import { locales, Locale } from "@/languages/config";
 
@@ -35,6 +36,7 @@ export default async function LocaleLayout({
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>
+            <PageLoadingProvider />
             <HeaderWrapper />
             <SiderWrapper />
             <LayoutWrapper>{children}</LayoutWrapper>

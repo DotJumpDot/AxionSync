@@ -8,9 +8,6 @@ import { Locale } from "@/languages/config";
 
 type AuthStore = {
   user: User | null;
-  isAuthenticated: boolean; // not persisted; kept for compatibility but derived by timers
-  loading: boolean;
-  error: string | null;
   token: string | null;
   tokenExpiresAt: number | null; // epoch ms
   logoutTimeoutId: number | null;
@@ -24,9 +21,6 @@ export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       user: null,
-      isAuthenticated: false,
-      loading: false,
-      error: null,
       token: null,
       tokenExpiresAt: null,
       logoutTimeoutId: null,
@@ -37,8 +31,6 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       login: async (data: LoginRequest) => {
-        set({ loading: true });
-
         try {
           const res = await authService.login(data);
           const result: LoginResponse = res.data;
@@ -50,21 +42,30 @@ export const useAuthStore = create<AuthStore>()(
             result.expiresAt
           ) {
             const expiresAtMs = new Date(result.expiresAt).getTime();
+            console.log("[AUTH] Login successful:", {
+              user: result.user.username,
+              token: result.token.substring(0, 20) + "...",
+              expiresAt: result.expiresAt,
+              expiresAtMs,
+            });
+
+            // Update state (this will trigger persist middleware to save to localStorage)
             set({
               user: result.user,
-              isAuthenticated: true,
-              loading: false,
-              error: null,
               token: result.token,
               tokenExpiresAt: expiresAtMs,
             });
+
+            // Wait a tick to ensure localStorage is persisted before returning
+            // This ensures the token is available when mainmenu page mounts
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
             // Schedule auto-logout exactly at expiry
             const delay = Math.max(0, expiresAtMs - Date.now());
             if (typeof window !== "undefined") {
               const id = window.setTimeout(() => {
                 set({
                   user: null,
-                  isAuthenticated: false,
                   token: null,
                   tokenExpiresAt: null,
                   logoutTimeoutId: null,
@@ -76,10 +77,10 @@ export const useAuthStore = create<AuthStore>()(
             return { success: true };
           }
 
-          set({ loading: false });
+          console.warn("[AUTH] Login failed:", result);
           return { success: false };
-        } catch {
-          set({ loading: false });
+        } catch (e) {
+          console.error("[AUTH] Login error:", e);
           return { success: false };
         }
       },
@@ -91,15 +92,13 @@ export const useAuthStore = create<AuthStore>()(
           }
           return {
             user: null,
-            isAuthenticated: false,
-            error: null,
             token: null,
             tokenExpiresAt: null,
             logoutTimeoutId: null,
           } as AuthStore;
         });
 
-        // 🔥 เคลียร์ persist ทั้งก้อน
+        // Clear persist
         localStorage.removeItem("auth-store");
       },
     }),
@@ -120,18 +119,15 @@ export const useAuthStore = create<AuthStore>()(
           !!restored.tokenExpiresAt &&
           now < restored.tokenExpiresAt;
         if (!keep) {
-          // mutate restored snapshot to ensure store reflects expired token
+          // Clear expired token
           restored.user = null;
-          restored.isAuthenticated = false;
           restored.token = null;
           restored.tokenExpiresAt = null;
         } else {
-          restored.isAuthenticated = true;
-          // schedule logout for remaining duration
+          // Token is valid, schedule logout for remaining duration
           const remaining = restored.tokenExpiresAt! - now;
           if (typeof window !== "undefined") {
             const id = window.setTimeout(() => {
-              // cannot call set here; clear via localStorage removal and snapshot mutation is enough
               try {
                 localStorage.removeItem("auth-store");
               } catch {}

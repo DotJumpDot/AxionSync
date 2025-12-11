@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { usePageLoadingStore } from "@/Store/loading";
 import { locales } from "@/languages/config";
 
 export default function LayoutWrapper({
@@ -9,6 +11,12 @@ export default function LayoutWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const setLoading = usePageLoadingStore((s) => s.setLoading);
+
+  useEffect(() => {
+    setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const normalizedPath = (() => {
     const segments = pathname.split("/").filter(Boolean);

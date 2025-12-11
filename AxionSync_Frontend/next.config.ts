@@ -24,8 +24,24 @@ const nextConfig: NextConfig = {
 
   // inject env เข้า process.env ของ Next.js
   env: {
-    NEXT_PUBLIC_BACKEND_BASE_URL: process.env.BACKEND_BASE_URL,
-    NEXT_PUBLIC_X_API_KEY: process.env.X_API_KEY,
+    NEXT_PUBLIC_BACKEND_BASE_URL:
+      process.env.NEXT_PUBLIC_BACKEND_BASE_URL || process.env.BACKEND_BASE_URL,
+    NEXT_PUBLIC_X_API_KEY: process.env.NEXT_PUBLIC_X_API_KEY,
+  },
+
+  // Debug: log env vars
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      console.log("[NEXT] Environment variables loaded:", {
+        BACKEND_BASE_URL: process.env.BACKEND_BASE_URL,
+        NEXT_PUBLIC_BACKEND_BASE_URL: process.env.NEXT_PUBLIC_BACKEND_BASE_URL,
+        X_API_KEY: process.env.X_API_KEY ? "***" : undefined,
+        NEXT_PUBLIC_X_API_KEY: process.env.NEXT_PUBLIC_X_API_KEY
+          ? "***"
+          : undefined,
+      });
+    }
+    return config;
   },
 
   // Experimental features for better performance
