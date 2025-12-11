@@ -48,6 +48,7 @@ everything is synced and organized systematically to help you focus on what trul
 - **Tag system** for categorization
 - Public/Private bookmark visibility
 - Reviews and short reviews
+- Soft delete with trash/restore functionality
 
 ### 🔔 Smart Notifications
 - **Redis-based background worker** for scheduled notifications
@@ -67,6 +68,9 @@ everything is synced and organized systematically to help you focus on what trul
 - **bcrypt** password hashing
 - Role-based access control (User, Admin)
 - **CORS** configured for security
+
+### ⚙️ General
+- Customize Swagger (/docs) to enable login and retrieve the token directly within Swagger
 
 ---
 

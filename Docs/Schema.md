@@ -1,13 +1,36 @@
-# AxionSync Database Schema Documentation
 
-## Overview
-AxionSync uses PostgreSQL as its relational database. The application manages users, tabs, and memos with full CRUD operations.
+# 🎨 AxionSync Database Schema Documentation
+
+<div style="background: linear-gradient(90deg, #5865f2 0%, #ed4245 100%); padding: 16px; border-radius: 10px; color: white; font-size: 1.2em; margin-bottom: 24px;">
+<b>AxionSync</b> uses <b>PostgreSQL</b> as its relational database. This document covers all core entities, API models, and SQL scripts for the platform.
+</div>
 
 ---
 
-## Entity Models
+## 🗂️ Table of Contents
 
-### 1. User Entity
+- [Entity Models](#entity-models)
+    - [User Entity](#user-entity)
+    - [Tab Entity](#tab-entity)
+    - [Memo Entity](#memo-entity)
+    - [Bookmark Feature](#bookmark-feature)
+    - [Todo + Notification System](#todo--notification-system)
+- [API Request/Response Models](#api-requestresponse-models)
+- [SQL Schema Creation Scripts](#sql-schema-creation-scripts)
+- [Sample Data](#sample-data)
+- [Database Constraints & Relationships](#database-constraints--relationships)
+- [Environment Configuration](#environment-configuration)
+- [Migration Notes](#migration-notes)
+- [API Endpoints](#api-endpoints)
+- [Streak Calculation SQL](#streak-calculation-sql)
+- [Redis Queue System](#redis-queue-system)
+
+---
+
+
+## 🧑‍💻 Entity Models
+
+### <span style="color:#5865f2">👤 User Entity</span>
 **File:** `src/models/entity/en_user.py`
 
 | Field | Type | Nullable | Description |
@@ -23,15 +46,14 @@ AxionSync uses PostgreSQL as its relational database. The application manages us
 | created_at | datetime | No | Record creation timestamp (UTC) |
 | updated_at | datetime | Yes | Record last update timestamp (UTC) |
 
-**Notes:**
-- `username` should be UNIQUE for authentication
-- `role` is used for authorization (e.g., "user", "admin")
-- `picture_url` stores only the filename, images are stored in `public/userProfilePicture/`
-- Timestamps are stored in UTC
+> - <span style="color:#ed4245">username</span> should be **UNIQUE** for authentication
+> - <span style="color:#ed4245">role</span> is used for authorization (e.g., "user", "admin")
+> - <span style="color:#ed4245">picture_url</span> stores only the filename, images are stored in `public/userProfilePicture/`
+> - Timestamps are stored in UTC
 
 ---
 
-### 2. Tab Entity
+### <span style="color:#43b581">📁 Tab Entity</span>
 **File:** `src/models/entity/en_tab.py`
 
 | Field | Type | Nullable | Description |
@@ -43,17 +65,12 @@ AxionSync uses PostgreSQL as its relational database. The application manages us
 | font_name | str | No | Font family for tab content |
 | font_size | int | No | Font size for tab content |
 
-**Relationships:**
-- Many-to-One: Multiple tabs can belong to one user
-- Foreign Key: `user_id` → `user.id`
-
-**Notes:**
-- Each tab belongs to a user and defines styling for memos
-- Color format: hexadecimal (#RGB or #RRGGBB)
+> - Each tab belongs to a user and defines styling for memos
+> - Color format: hexadecimal (#RGB or #RRGGBB)
 
 ---
 
-### 3. Memo Entity
+### <span style="color:#faa61a">📝 Memo Entity</span>
 **File:** `src/models/entity/en_memo.py`
 
 | Field | Type | Nullable | Description |
@@ -70,18 +87,65 @@ AxionSync uses PostgreSQL as its relational database. The application manages us
 | created_at | datetime | No | Record creation timestamp (UTC) |
 | updated_at | datetime | Yes | Record last update timestamp (UTC) |
 
-**Relationships:**
-- Many-to-One: Multiple memos can belong to one user
-- Many-to-One: Multiple memos can belong to one tab
-- Foreign Key: `user_id` → `user.id`
-- Foreign Key: `tab_id` → `tab.id`
+> - Uses soft delete pattern (deleted_status = true instead of removing rows)
+> - Each memo must be associated with a user
+> - Memos can optionally be grouped by tab
+> - Font color can override tab's default styling
+> - Timestamps are stored in UTC
 
-**Notes:**
-- Uses soft delete pattern (deleted_status = true instead of removing rows)
-- Each memo must be associated with a user
-- Memos can optionally be grouped by tab
-- Font color can override tab's default styling
-- Timestamps are stored in UTC
+---
+
+### <span style="color:#f47fff">🔖 Bookmark Entity</span>
+**File:** `src/models/entity/en_bookmark.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | SERIAL | No | Primary key, auto-incremented |
+| name | VARCHAR(255) | No | Name of the bookmark item |
+| type | VARCHAR(50) | No | Type enum: Game, Movie, Novel, Manga, Manhwa, Anime, Series |
+| review | TEXT | Yes | Full review text |
+| watch_from | JSON | Yes | Source info: {"siteName": "Netflix", "siteURL": "https://..."} |
+| release_time | TIMESTAMP | Yes | Release date of the content |
+| time_used | INTEGER | Yes | Time spent in minutes |
+| rating | DECIMAL(3,1) | Yes | Overall rating 0-10 |
+| story_rating | DECIMAL(3,1) | Yes | Story rating 0-10 |
+| action_rating | DECIMAL(3,1) | Yes | Action rating 0-10 |
+| graphic_rating | DECIMAL(3,1) | Yes | Graphics/visuals rating 0-10 |
+| sound_rating | DECIMAL(3,1) | Yes | Sound/music rating 0-10 |
+| chapter | VARCHAR(100) | Yes | Current chapter/episode |
+| mood | JSON | Yes | Array of mood strings (max 5) |
+| review_version | INTEGER | No | Auto-managed version number |
+| short_review | TEXT | Yes | Brief summary review |
+| status | VARCHAR(50) | No | Status enum: onGoing, Finished, PreWatch, Dropped |
+| public | BOOLEAN | No | Whether bookmark is public (default: false) |
+| user_id | INTEGER | No | FK to user.id |
+| created_at | TIMESTAMP | No | Creation timestamp |
+| updated_at | TIMESTAMP | Yes | Last update timestamp |
+| cover_image | VARCHAR(255) | Yes | Cover image filename |
+| deleted_status | BOOLEAN | No | Soft delete flag (default: false) |
+| last_viewed_at | TIMESTAMP | Yes | Last time user viewed this bookmark |
+
+---
+
+### <span style="color:#fbbf24">✅ Todo Entity</span>
+**File:** `src/models/entity/en_todo.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | int | No | Primary key, auto-incremented |
+| title | str | No | Todo title |
+| description | str | Yes | Detailed description |
+| status | str | No | 'pending' | 'in_progress' | 'completed' | 'cancelled' |
+| priority | str | No | 'low' | 'medium' | 'high' | 'urgent' |
+| due_date | datetime | Yes | Deadline timestamp |
+| completed_at | datetime | Yes | When todo was completed |
+| is_repeat | bool | No | Whether todo repeats (default: false) |
+| repeat_type | str | Yes | 'daily' | 'weekly' | 'monthly' |
+| mood | str | Yes | 'motivated' | 'lazy' | 'focused' | 'stressed' | 'excited' |
+| user_id | int | No | FK to user.id |
+| deleted_status | bool | No | Soft delete flag (default: false) |
+| created_at | datetime | No | Creation timestamp (UTC) |
+| updated_at | datetime | Yes | Last update timestamp (UTC) |
 
 ---
 
@@ -130,7 +194,8 @@ font_color: str (optional, hex)
 
 ---
 
-## SQL Schema Creation Scripts
+
+## 🏗️ SQL Schema Creation Scripts
 
 ### Prerequisites
 ```sql
@@ -139,82 +204,23 @@ CREATE DATABASE axionsync;
 \c axionsync
 ```
 
-### 1. Create Users Table
+### Create All Tables (Single Script)
 ```sql
+-- Drop existing tables (for development/testing only)
+DROP TABLE IF EXISTS user_device_token CASCADE;
+DROP TABLE IF EXISTS todo_notification CASCADE;
+DROP TABLE IF EXISTS todo_status_history CASCADE;
+DROP TABLE IF EXISTS todo_share CASCADE;
+DROP TABLE IF EXISTS todo_tag_pivot CASCADE;
+DROP TABLE IF EXISTS todo_tag CASCADE;
+DROP TABLE IF EXISTS todo_item CASCADE;
+DROP TABLE IF EXISTS todo CASCADE;
+DROP TABLE IF EXISTS bookmark_tag CASCADE;
+DROP TABLE IF EXISTS bookmark CASCADE;
+DROP TABLE IF EXISTS tag CASCADE;
+DROP TABLE IF EXISTS memo CASCADE;
+DROP TABLE IF EXISTS tab CASCADE;
 DROP TABLE IF EXISTS "user" CASCADE;
-
-CREATE TABLE IF NOT EXISTS "user" (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    firstname VARCHAR(255),
-    lastname VARCHAR(255),
-    nickname VARCHAR(255),
-    role VARCHAR(50) NOT NULL DEFAULT 'user',
-    tel VARCHAR(20),
-    picture_url VARCHAR(255) NOT NULL DEFAULT 'unidentified.jpg',
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE
-);
-
--- Create index on username for faster login queries
-CREATE INDEX idx_user_username ON "user"(username);
-CREATE INDEX idx_user_created_at ON "user"(created_at);
-```
-
-### 2. Create Tabs Table
-```sql
-CREATE TABLE IF NOT EXISTS tab (
-    id SERIAL PRIMARY KEY,
-    tab_name VARCHAR(255) NOT NULL,
-    color VARCHAR(7) NOT NULL,
-    user_id INTEGER NOT NULL,
-    font_name VARCHAR(100) NOT NULL,
-    font_size INTEGER NOT NULL,
-    CONSTRAINT fk_tab_user_id FOREIGN KEY (user_id)
-        REFERENCES "user"(id) ON DELETE CASCADE
-);
-
--- Create indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_tab_user_id ON tab(user_id);
-```
-
-### 3. Create Memos Table
-```sql
-CREATE TABLE IF NOT EXISTS memo (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    user_id INTEGER NOT NULL,
-    tab_id INTEGER,
-    font_color VARCHAR(7),
-    deleted_status BOOLEAN NOT NULL DEFAULT FALSE,
-    collected BOOLEAN NOT NULL DEFAULT FALSE,
-    collected_time TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_memo_user_id FOREIGN KEY (user_id) 
-        REFERENCES "user"(id) ON DELETE CASCADE,
-    CONSTRAINT fk_memo_tab_id FOREIGN KEY (tab_id)
-        REFERENCES tab(id) ON DELETE SET NULL
-);
-
--- Create indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_memo_user_id ON memo(user_id);
-CREATE INDEX IF NOT EXISTS idx_memo_tab_id ON memo(tab_id);
-CREATE INDEX IF NOT EXISTS idx_memo_created_at ON memo(created_at ASC);
-CREATE INDEX IF NOT EXISTS idx_memo_updated_at ON memo(updated_at DESC);
-CREATE INDEX IF NOT EXISTS idx_memo_deleted_status ON memo(deleted_status);
-CREATE INDEX IF NOT EXISTS idx_memo_collected ON memo(collected);
-CREATE INDEX IF NOT EXISTS idx_memo_user_deleted ON memo(user_id, deleted_status);
-```
-
-### 4. Complete SQL Script (Run All at Once)
-```sql
--- Drop existing tables (optional - use for development/testing only)
--- DROP TABLE IF EXISTS memo CASCADE;
--- DROP TABLE IF EXISTS tab CASCADE;
--- DROP TABLE IF EXISTS "user" CASCADE;
 
 -- Create user table
 CREATE TABLE IF NOT EXISTS "user" (
@@ -230,10 +236,21 @@ CREATE TABLE IF NOT EXISTS "user" (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE
 );
-
--- Create indexes for user table
 CREATE INDEX IF NOT EXISTS idx_user_username ON "user"(username);
 CREATE INDEX IF NOT EXISTS idx_user_created_at ON "user"(created_at);
+
+-- Create tab table
+CREATE TABLE IF NOT EXISTS tab (
+    id SERIAL PRIMARY KEY,
+    tab_name VARCHAR(255) NOT NULL,
+    color VARCHAR(7) NOT NULL,
+    user_id INTEGER NOT NULL,
+    font_name VARCHAR(100) NOT NULL,
+    font_size INTEGER NOT NULL,
+    CONSTRAINT fk_tab_user_id FOREIGN KEY (user_id)
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_tab_user_id ON tab(user_id);
 
 -- Create memo table
 CREATE TABLE IF NOT EXISTS memo (
@@ -253,8 +270,6 @@ CREATE TABLE IF NOT EXISTS memo (
     CONSTRAINT fk_memo_tab_id FOREIGN KEY (tab_id)
         REFERENCES tab(id) ON DELETE SET NULL
 );
-
--- Create indexes for memo table
 CREATE INDEX IF NOT EXISTS idx_memo_user_id ON memo(user_id);
 CREATE INDEX IF NOT EXISTS idx_memo_tab_id ON memo(tab_id);
 CREATE INDEX IF NOT EXISTS idx_memo_created_at ON memo(created_at ASC);
@@ -262,20 +277,222 @@ CREATE INDEX IF NOT EXISTS idx_memo_updated_at ON memo(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_memo_deleted_status ON memo(deleted_status);
 CREATE INDEX IF NOT EXISTS idx_memo_collected ON memo(collected);
 CREATE INDEX IF NOT EXISTS idx_memo_user_deleted ON memo(user_id, deleted_status);
+
+-- Create tag table
+CREATE TABLE IF NOT EXISTS tag (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    tag_priority INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_tag_name ON tag(name);
+
+-- Create bookmark table
+CREATE TABLE IF NOT EXISTS bookmark (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('Game', 'Movie', 'Novel', 'Manga', 'Manhwa', 'Anime', 'Series')),
+    review TEXT,
+    watch_from JSON,
+    release_time TIMESTAMP WITH TIME ZONE,
+    time_used INTEGER,
+    rating DECIMAL(3,1) CHECK (rating >= 0 AND rating <= 10),
+    story_rating DECIMAL(3,1) CHECK (story_rating >= 0 AND story_rating <= 10),
+    action_rating DECIMAL(3,1) CHECK (action_rating >= 0 AND action_rating <= 10),
+    graphic_rating DECIMAL(3,1) CHECK (graphic_rating >= 0 AND graphic_rating <= 10),
+    sound_rating DECIMAL(3,1) CHECK (sound_rating >= 0 AND sound_rating <= 10),
+    chapter VARCHAR(100),
+    mood JSON,
+    review_version INTEGER NOT NULL DEFAULT 1,
+    short_review TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'PreWatch' CHECK (status IN ('onGoing', 'Finished', 'PreWatch', 'Dropped')),
+    public BOOLEAN NOT NULL DEFAULT FALSE,
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    cover_image VARCHAR(255),
+    deleted_status BOOLEAN NOT NULL DEFAULT FALSE,
+    last_viewed_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_bookmark_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_bookmark_user_id ON bookmark(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_type ON bookmark(type);
+CREATE INDEX IF NOT EXISTS idx_bookmark_status ON bookmark(status);
+CREATE INDEX IF NOT EXISTS idx_bookmark_public ON bookmark(public);
+CREATE INDEX IF NOT EXISTS idx_bookmark_created_at ON bookmark(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bookmark_deleted_status ON bookmark(deleted_status);
+CREATE INDEX IF NOT EXISTS idx_bookmark_user_deleted ON bookmark(user_id, deleted_status);
+
+-- Create bookmark_tag table
+CREATE TABLE IF NOT EXISTS bookmark_tag (
+    bookmark_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (bookmark_id, tag_id),
+    CONSTRAINT fk_bookmark_tag_bookmark_id FOREIGN KEY (bookmark_id) 
+        REFERENCES bookmark(id) ON DELETE CASCADE,
+    CONSTRAINT fk_bookmark_tag_tag_id FOREIGN KEY (tag_id) 
+        REFERENCES tag(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_bookmark_tag_bookmark_id ON bookmark_tag(bookmark_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_tag_tag_id ON bookmark_tag(tag_id);
+
+-- Create todo table
+CREATE TABLE IF NOT EXISTS todo (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' 
+        CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
+    priority VARCHAR(50) NOT NULL DEFAULT 'medium'
+        CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    due_date TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    is_repeat BOOLEAN NOT NULL DEFAULT FALSE,
+    repeat_type VARCHAR(50) CHECK (repeat_type IN ('daily', 'weekly', 'monthly')),
+    mood VARCHAR(50) CHECK (mood IN ('motivated', 'lazy', 'focused', 'stressed', 'excited')),
+    user_id INTEGER NOT NULL,
+    deleted_status BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_todo_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_todo_user_id ON todo(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_status ON todo(status);
+CREATE INDEX IF NOT EXISTS idx_todo_due_date ON todo(due_date);
+CREATE INDEX IF NOT EXISTS idx_todo_priority ON todo(priority);
+CREATE INDEX IF NOT EXISTS idx_todo_user_deleted ON todo(user_id, deleted_status);
+CREATE INDEX IF NOT EXISTS idx_todo_user_status ON todo(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_todo_due_date_status ON todo(due_date, status);
+
+-- Create todo_item table
+CREATE TABLE IF NOT EXISTS todo_item (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    is_done BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_todo_item_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_todo_item_todo_id ON todo_item(todo_id);
+
+-- Create todo_tag table
+CREATE TABLE IF NOT EXISTS todo_tag (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    color VARCHAR(7),
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_tag_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE,
+    CONSTRAINT uq_todo_tag_name_user UNIQUE (name, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_todo_tag_user_id ON todo_tag(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_tag_name ON todo_tag(name);
+
+-- Create todo_tag_pivot table
+CREATE TABLE IF NOT EXISTS todo_tag_pivot (
+    todo_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (todo_id, tag_id),
+    CONSTRAINT fk_todo_tag_pivot_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_tag_pivot_tag_id FOREIGN KEY (tag_id) 
+        REFERENCES todo_tag(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_todo_tag_pivot_todo_id ON todo_tag_pivot(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_tag_pivot_tag_id ON todo_tag_pivot(tag_id);
+
+-- Create todo_share table
+CREATE TABLE IF NOT EXISTS todo_share (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    shared_with_user_id INTEGER NOT NULL,
+    permission VARCHAR(20) NOT NULL DEFAULT 'view'
+        CHECK (permission IN ('view', 'edit')),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_share_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_share_user_id FOREIGN KEY (shared_with_user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE,
+    CONSTRAINT uq_todo_share UNIQUE (todo_id, shared_with_user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_todo_share_todo_id ON todo_share(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_share_user_id ON todo_share(shared_with_user_id);
+
+-- Create todo_status_history table
+CREATE TABLE IF NOT EXISTS todo_status_history (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    old_status VARCHAR(50) NOT NULL,
+    new_status VARCHAR(50) NOT NULL,
+    changed_by INTEGER NOT NULL,
+    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_status_history_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_status_history_changed_by FOREIGN KEY (changed_by) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_todo_id ON todo_status_history(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_changed_at ON todo_status_history(changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_new_status ON todo_status_history(new_status);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_user_completed ON todo_status_history(changed_by, new_status, changed_at);
+
+-- Create todo_notification table
+CREATE TABLE IF NOT EXISTS todo_notification (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    notify_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    channel VARCHAR(20) NOT NULL DEFAULT 'in_app'
+        CHECK (channel IN ('in_app', 'email', 'push')),
+    message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_notification_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_notification_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_user_id ON todo_notification(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_notify_time ON todo_notification(notify_time);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_is_sent ON todo_notification(is_sent);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_pending ON todo_notification(notify_time, is_sent) WHERE is_sent = FALSE;
+
+-- Create user_device_token table
+CREATE TABLE IF NOT EXISTS user_device_token (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    device_token VARCHAR(500) NOT NULL UNIQUE,
+    platform VARCHAR(20) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_user_device_token_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_user_device_token_user_id ON user_device_token(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_device_token_active ON user_device_token(user_id, is_active) WHERE is_active = TRUE;
 ```
 
 ---
 
-## Sample Data
 
+## 🧪 Sample Data
+
+### 👤 User Sample Data
 ```sql
 -- Create a sample user
 INSERT INTO "user" (username, password_hash, firstname, lastname, nickname, role, tel, picture_url)
 VALUES ('admin', '1234', 'Demo', 'User', 'Demo', 'Admin', '0800000000', 'unidentified.jpg')
 RETURNING id;
-
 -- Assume returned id is 1
+```
 
+### 📁 Tab Sample Data
+```sql
 -- Create sample tabs
 INSERT INTO tab (tab_name, color, user_id, font_name, font_size)
 VALUES 
@@ -283,16 +500,21 @@ VALUES
     ('Bugs', '#ed4245', 1, 'Inter', 14),
     ('Ideas', '#43b581', 1, 'Inter', 16)
 RETURNING id;
-
 -- Assume tab ids 1,2,3
+```
 
+### 📝 Memo Sample Data
+```sql
 -- Create sample memos (ordered oldest→newest)
 INSERT INTO memo (title, content, user_id, tab_id, font_color)
 VALUES
     ('Memo', 'Hello world!', 1, 1, NULL),
     ('Memo', 'Bug: cannot login', 1, 2, '#FFAA00'),
     ('Memo', 'New idea: add themes', 1, 3, NULL);
+```
 
+### 🔖 Bookmark Sample Data
+```sql
 -- Create sample tags
 INSERT INTO tag (name, tag_priority) VALUES
     ('Action', 1),
@@ -319,6 +541,67 @@ INSERT INTO bookmark_tag (bookmark_id, tag_id) VALUES
     (2, 3), -- Witcher: Fantasy
     (3, 2), -- Your Name: Romance
     (3, 4); -- Your Name: Comedy
+```
+
+### ✅ Todo Sample Data
+```sql
+-- Create sample todos for user_id = 1
+INSERT INTO todo (title, description, status, priority, due_date, is_repeat, mood, user_id)
+VALUES 
+    ('Complete project documentation', 'Write API docs and deployment guide', 'in_progress', 'high', NOW() + INTERVAL '2 days', FALSE, 'focused', 1),
+    ('Review pull requests', 'Check pending PRs from team', 'pending', 'medium', NOW() + INTERVAL '1 day', FALSE, 'motivated', 1),
+    ('Daily standup meeting', 'Attend daily standup with team', 'pending', 'medium', NOW() + INTERVAL '6 hours', TRUE, NULL, 1),
+    ('Fix login bug', 'Users getting 401 on mobile app', 'completed', 'urgent', NOW() - INTERVAL '1 day', FALSE, 'excited', 1)
+RETURNING id;
+-- Assume todo ids 1,2,3,4
+
+-- Update todo 4 with completed_at
+UPDATE todo SET completed_at = NOW() - INTERVAL '1 day' WHERE id = 4;
+
+-- Create checklist items
+INSERT INTO todo_item (todo_id, content, is_done)
+VALUES
+    (1, 'Write introduction section', TRUE),
+    (1, 'Document API endpoints', TRUE),
+    (1, 'Add code examples', FALSE),
+    (1, 'Create deployment guide', FALSE),
+    (2, 'Review frontend PR #123', FALSE),
+    (2, 'Review backend PR #456', FALSE);
+
+-- Create tags
+INSERT INTO todo_tag (name, color, user_id)
+VALUES
+    ('Work', '#3B82F6', 1),
+    ('Personal', '#22C55E', 1),
+    ('Urgent', '#EF4444', 1),
+    ('Meeting', '#8B5CF6', 1)
+RETURNING id;
+-- Assume tag ids 1,2,3,4
+
+-- Assign tags to todos
+INSERT INTO todo_tag_pivot (todo_id, tag_id)
+VALUES
+    (1, 1), -- Documentation: Work
+    (2, 1), -- PRs: Work
+    (3, 1), -- Standup: Work
+    (3, 4), -- Standup: Meeting
+    (4, 1), -- Bug fix: Work
+    (4, 3); -- Bug fix: Urgent
+
+-- Create status history
+INSERT INTO todo_status_history (todo_id, old_status, new_status, changed_by, changed_at)
+VALUES
+    (1, '', 'pending', 1, NOW() - INTERVAL '3 days'),
+    (1, 'pending', 'in_progress', 1, NOW() - INTERVAL '2 days'),
+    (4, '', 'pending', 1, NOW() - INTERVAL '2 days'),
+    (4, 'pending', 'in_progress', 1, NOW() - INTERVAL '1 day'),
+    (4, 'in_progress', 'completed', 1, NOW() - INTERVAL '1 day');
+
+-- Create notification for todo 3 (standup meeting)
+INSERT INTO todo_notification (todo_id, user_id, notify_time, channel, message)
+VALUES
+    (3, 1, NOW() + INTERVAL '5 hours 50 minutes', 'push', 'Standup meeting in 10 minutes!'),
+    (1, 1, NOW() + INTERVAL '1 day 23 hours', 'in_app', 'Documentation deadline tomorrow');
 ```
 
 ## Database Constraints & Relationships
@@ -641,67 +924,6 @@ ALTER COLUMN review_version SET DEFAULT 1;
 -- Update existing NULL review_versions to 1
 UPDATE bookmark SET review_version = 1 WHERE review_version IS NULL;
 ```
-
----
-
-## Bookmark API Request/Response Models
-
-### CreateBookmarkRequest
-```json
-{
-  "name": "string (required)",
-  "type": "string (required, one of: Game, Movie, Novel, Manga, Manhwa, Anime, Series)",
-  "review": "string (optional)",
-  "watch_from": {
-    "siteName": "string (required if watch_from provided)",
-    "siteURL": "string (optional)"
-  },
-  "release_time": "datetime (optional)",
-  "time_used": "int (optional, minutes)",
-  "rating": "float (optional, 0-10)",
-  "story_rating": "float (optional, 0-10)",
-  "action_rating": "float (optional, 0-10)",
-  "graphic_rating": "float (optional, 0-10)",
-  "sound_rating": "float (optional, 0-10)",
-  "chapter": "string (optional)",
-  "mood": ["string array (optional, max 5, from valid mood list)"],
-  "short_review": "string (optional)",
-  "status": "string (optional, default: 'PreWatch')",
-  "public": "bool (optional, default: false)",
-  "cover_image": "string (optional)",
-  "tag_ids": "[int] (optional, list of tag IDs to associate)"
-}
-```
-**Note:** `review_version` is NOT included - it's auto-set to 1 by the backend.
-
-### UpdateBookmarkRequest
-```json
-{
-  "name": "string (optional)",
-  "type": "string (optional)",
-  "review": "string (optional)",
-  "watch_from": {
-    "siteName": "string",
-    "siteURL": "string (optional)"
-  },
-  "release_time": "datetime (optional)",
-  "time_used": "int (optional)",
-  "rating": "float (optional)",
-  "story_rating": "float (optional)",
-  "action_rating": "float (optional)",
-  "graphic_rating": "float (optional)",
-  "sound_rating": "float (optional)",
-  "chapter": "string (optional)",
-  "mood": ["string array (optional, max 5)"],
-  "short_review": "string (optional)",
-  "status": "string (optional)",
-  "public": "bool (optional)",
-  "cover_image": "string (optional)",
-  "tag_ids": "[int] (optional)"
-}
-```
-**Note:** `review_version` is NOT included - it's auto-incremented by the backend on each update.
-
 
 ---
 
@@ -1266,138 +1488,6 @@ Note: Dec 8 has no completion, so streak resets
 ```
 
 ---
-
-## Todo API Request/Response Models
-
-### CreateTodoRequest
-```json
-{
-  "title": "string (required)",
-  "description": "string (optional)",
-  "status": "string (optional, default: 'pending')",
-  "priority": "string (optional, default: 'medium')",
-  "due_date": "datetime (optional)",
-  "is_repeat": "bool (optional, default: false)",
-  "repeat_type": "string (optional, required if is_repeat=true)",
-  "mood": "string (optional)",
-  "tag_ids": "[int] (optional, list of tag IDs)"
-}
-```
-
-### UpdateTodoRequest
-```json
-{
-  "title": "string (optional)",
-  "description": "string (optional)",
-  "status": "string (optional)",
-  "priority": "string (optional)",
-  "due_date": "datetime (optional)",
-  "is_repeat": "bool (optional)",
-  "repeat_type": "string (optional)",
-  "mood": "string (optional)",
-  "tag_ids": "[int] (optional)"
-}
-```
-
-### CreateTodoItemRequest
-```json
-{
-  "content": "string (required)"
-}
-```
-
-### UpdateTodoItemRequest
-```json
-{
-  "content": "string (optional)",
-  "is_done": "bool (optional)"
-}
-```
-
-### CreateTodoTagRequest
-```json
-{
-  "name": "string (required)",
-  "color": "string (optional, hex format)"
-}
-```
-
-### ShareTodoRequest
-```json
-{
-  "shared_with_user_id": "int (required)",
-  "permission": "string (optional, default: 'view')"
-}
-```
-
-### CreateNotificationRequest
-```json
-{
-  "todo_id": "int (required)",
-  "notify_time": "datetime (required, must be in future)",
-  "channel": "string (optional, default: 'in_app')",
-  "message": "string (optional)"
-}
-```
-
-### RegisterDeviceTokenRequest
-```json
-{
-  "device_token": "string (required)",
-  "platform": "string (required, 'ios'|'android'|'web')"
-}
-```
-
-### StreakSummary Response
-```json
-{
-  "current_streak": "int",
-  "longest_streak": "int",
-  "total_completed": "int",
-  "last_completed_date": "datetime | null"
-}
-```
-
-### TodoAnalytics Response
-```json
-{
-  "total_todos": "int",
-  "completed_todos": "int",
-  "pending_todos": "int",
-  "in_progress_todos": "int",
-  "cancelled_todos": "int",
-  "completion_rate": "float (percentage)",
-  "streak": "StreakSummary"
-}
-```
-
----
-
-
-## Redis Queue System
-
-### Overview
-The notification system uses Redis sorted sets for delayed job processing.
-
-### Queue Names
-- `axionsync:notifications:scheduled` - Jobs waiting to be executed
-- `axionsync:notifications:processing` - Jobs currently being processed
-- `axionsync:notifications:dead_letter` - Failed jobs after max retries
-
-### Job Payload Structure
-```json
-{
-  "notification_id": 123,
-  "todo_id": 456,
-  "user_id": 789,
-  "channel": "push",
-  "message": "Don't forget your todo!",
-  "scheduled_at": "2025-12-11T10:00:00Z",
-  "retry_count": 0,
-  "max_retries": 3,
-  "created_at": "2025-12-11T09:00:00Z"
-}
-```
 
 ### Job Lifecycle
 1. **Schedule**: When notification created, job added to `scheduled` queue with score = execute_at timestamp
