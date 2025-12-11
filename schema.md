@@ -702,145 +702,852 @@ UPDATE bookmark SET review_version = 1 WHERE review_version IS NULL;
 ```
 **Note:** `review_version` is NOT included - it's auto-incremented by the backend on each update.
 
-### Mood Validation Rules
-- Maximum 5 moods per bookmark
-- Each mood must be from the valid mood list
-- Backend returns 400 error if validation fails
 
-### CreateTagRequest
-```
-name: str (required, unique)
-tag_priority: int (optional, default: 0)
+---
+
+## Todo + Notification System
+
+### Overview
+The Todo system provides task management with:
+- Core todo CRUD operations
+- Shared todos with permission levels
+- Checklist sub-tasks
+- Tag system for categorization
+- Status history for analytics and streak calculation
+- Notification scheduling via Redis queue
+- Push notification support for multiple platforms
+
+---
+
+## Todo Entity Models
+
+### Todo Entity
+**File:** `src/models/entity/en_todo.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | int | No | Primary key, auto-incremented |
+| title | str | No | Todo title |
+| description | str | Yes | Detailed description |
+| status | str | No | 'pending' \| 'in_progress' \| 'completed' \| 'cancelled' |
+| priority | str | No | 'low' \| 'medium' \| 'high' \| 'urgent' |
+| due_date | datetime | Yes | Deadline timestamp |
+| completed_at | datetime | Yes | When todo was completed |
+| is_repeat | bool | No | Whether todo repeats (default: false) |
+| repeat_type | str | Yes | 'daily' \| 'weekly' \| 'monthly' |
+| mood | str | Yes | 'motivated' \| 'lazy' \| 'focused' \| 'stressed' \| 'excited' |
+| user_id | int | No | FK to user.id |
+| deleted_status | bool | No | Soft delete flag (default: false) |
+| created_at | datetime | No | Creation timestamp (UTC) |
+| updated_at | datetime | Yes | Last update timestamp (UTC) |
+
+**Relationships:**
+- Many-to-One: Multiple todos belong to one user
+- One-to-Many: One todo has many checklist items
+- Many-to-Many: Todos and tags via pivot table
+- One-to-Many: One todo can be shared with multiple users
+
+**Valid Status Values:** `pending`, `in_progress`, `completed`, `cancelled`
+**Valid Priority Values:** `low`, `medium`, `high`, `urgent`
+**Valid Repeat Types:** `daily`, `weekly`, `monthly`
+**Valid Mood Values:** `motivated`, `lazy`, `focused`, `stressed`, `excited`
+
+---
+
+### TodoItem Entity (Checklist / Sub-tasks)
+**File:** `src/models/entity/en_todo.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | int | No | Primary key, auto-incremented |
+| todo_id | int | No | FK to todo.id |
+| content | str | No | Checklist item content |
+| is_done | bool | No | Whether item is completed (default: false) |
+| created_at | datetime | No | Creation timestamp |
+| updated_at | datetime | Yes | Last update timestamp |
+
+**Relationships:**
+- Many-to-One: Multiple items belong to one todo
+- Foreign Key: `todo_id` → `todo.id` (CASCADE DELETE)
+
+---
+
+### TodoTag Entity
+**File:** `src/models/entity/en_todo.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | int | No | Primary key, auto-incremented |
+| name | str | No | Tag name (unique per user) |
+| color | str | Yes | Tag color in hex format (#RRGGBB) |
+| user_id | int | No | FK to user.id (tag owner) |
+| created_at | datetime | No | Creation timestamp |
+
+**Relationships:**
+- Many-to-One: Multiple tags belong to one user
+- Many-to-Many: Tags and todos via pivot table
+
+---
+
+### TodoShare Entity
+**File:** `src/models/entity/en_todo.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | int | No | Primary key, auto-incremented |
+| todo_id | int | No | FK to todo.id |
+| shared_with_user_id | int | No | FK to user.id |
+| permission | str | No | 'view' \| 'edit' |
+| created_at | datetime | No | Share creation timestamp |
+
+**Relationships:**
+- Many-to-One: Multiple shares can exist for one todo
+- Foreign Key: `todo_id` → `todo.id` (CASCADE DELETE)
+- Foreign Key: `shared_with_user_id` → `user.id`
+- Unique Constraint: (todo_id, shared_with_user_id)
+
+---
+
+### TodoStatusHistory Entity
+**File:** `src/models/entity/en_todo.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | int | No | Primary key, auto-incremented |
+| todo_id | int | No | FK to todo.id |
+| old_status | str | No | Previous status |
+| new_status | str | No | New status |
+| changed_by | int | No | FK to user.id who made the change |
+| changed_at | datetime | No | When the change was made |
+
+**Purpose:**
+- Track status transitions for analytics
+- Calculate streaks from completion dates
+- Audit trail for shared todos
+
+---
+
+### TodoNotification Entity
+**File:** `src/models/entity/en_notification.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | int | No | Primary key, auto-incremented |
+| todo_id | int | No | FK to todo.id |
+| user_id | int | No | FK to user.id |
+| notify_time | datetime | No | When to send notification |
+| is_sent | bool | No | Whether notification has been sent (default: false) |
+| channel | str | No | 'in_app' \| 'email' \| 'push' |
+| message | str | Yes | Custom notification message |
+| created_at | datetime | No | Creation timestamp |
+
+**Valid Channel Values:** `in_app`, `email`, `push`
+
+---
+
+### UserDeviceToken Entity
+**File:** `src/models/entity/en_notification.py`
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| id | int | No | Primary key, auto-incremented |
+| user_id | int | No | FK to user.id |
+| device_token | str | No | Device token for push notifications (unique) |
+| platform | str | No | 'ios' \| 'android' \| 'web' |
+| is_active | bool | No | Whether device is active (default: true) |
+| created_at | datetime | No | Registration timestamp |
+| updated_at | datetime | Yes | Last update timestamp |
+
+**Valid Platform Values:** `ios`, `android`, `web`
+
+---
+
+## Todo SQL Schema Creation Scripts
+
+### 8. Create Todo Table
+```sql
+CREATE TABLE IF NOT EXISTS todo (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' 
+        CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
+    priority VARCHAR(50) NOT NULL DEFAULT 'medium'
+        CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    due_date TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    is_repeat BOOLEAN NOT NULL DEFAULT FALSE,
+    repeat_type VARCHAR(50) CHECK (repeat_type IN ('daily', 'weekly', 'monthly')),
+    mood VARCHAR(50) CHECK (mood IN ('motivated', 'lazy', 'focused', 'stressed', 'excited')),
+    user_id INTEGER NOT NULL,
+    deleted_status BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_todo_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_todo_user_id ON todo(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_status ON todo(status);
+CREATE INDEX IF NOT EXISTS idx_todo_due_date ON todo(due_date);
+CREATE INDEX IF NOT EXISTS idx_todo_priority ON todo(priority);
+CREATE INDEX IF NOT EXISTS idx_todo_user_deleted ON todo(user_id, deleted_status);
+CREATE INDEX IF NOT EXISTS idx_todo_user_status ON todo(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_todo_due_date_status ON todo(due_date, status);
 ```
 
-### UpdateTagRequest
+### 9. Create TodoItem Table (Checklist)
+```sql
+CREATE TABLE IF NOT EXISTS todo_item (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    is_done BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_todo_item_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE
+);
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_todo_item_todo_id ON todo_item(todo_id);
 ```
-name: str (optional)
-tag_priority: int (optional)
+
+### 10. Create TodoTag Table
+```sql
+CREATE TABLE IF NOT EXISTS todo_tag (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    color VARCHAR(7),
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_tag_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE,
+    CONSTRAINT uq_todo_tag_name_user UNIQUE (name, user_id)
+);
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_todo_tag_user_id ON todo_tag(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_tag_name ON todo_tag(name);
+```
+
+### 11. Create TodoTagPivot Table (Many-to-Many)
+```sql
+CREATE TABLE IF NOT EXISTS todo_tag_pivot (
+    todo_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (todo_id, tag_id),
+    CONSTRAINT fk_todo_tag_pivot_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_tag_pivot_tag_id FOREIGN KEY (tag_id) 
+        REFERENCES todo_tag(id) ON DELETE CASCADE
+);
+
+-- Performance indexes for fast tag filtering
+CREATE INDEX IF NOT EXISTS idx_todo_tag_pivot_todo_id ON todo_tag_pivot(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_tag_pivot_tag_id ON todo_tag_pivot(tag_id);
+```
+
+### 12. Create TodoShare Table
+```sql
+CREATE TABLE IF NOT EXISTS todo_share (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    shared_with_user_id INTEGER NOT NULL,
+    permission VARCHAR(20) NOT NULL DEFAULT 'view'
+        CHECK (permission IN ('view', 'edit')),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_share_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_share_user_id FOREIGN KEY (shared_with_user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE,
+    CONSTRAINT uq_todo_share UNIQUE (todo_id, shared_with_user_id)
+);
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_todo_share_todo_id ON todo_share(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_share_user_id ON todo_share(shared_with_user_id);
+```
+
+### 13. Create TodoStatusHistory Table
+```sql
+CREATE TABLE IF NOT EXISTS todo_status_history (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    old_status VARCHAR(50) NOT NULL,
+    new_status VARCHAR(50) NOT NULL,
+    changed_by INTEGER NOT NULL,
+    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_status_history_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_status_history_changed_by FOREIGN KEY (changed_by) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Performance indexes for streak calculation
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_todo_id ON todo_status_history(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_changed_at ON todo_status_history(changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_new_status ON todo_status_history(new_status);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_user_completed ON todo_status_history(changed_by, new_status, changed_at);
+```
+
+### 14. Create TodoNotification Table
+```sql
+CREATE TABLE IF NOT EXISTS todo_notification (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    notify_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    channel VARCHAR(20) NOT NULL DEFAULT 'in_app'
+        CHECK (channel IN ('in_app', 'email', 'push')),
+    message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_notification_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_notification_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Performance indexes for notification worker
+CREATE INDEX IF NOT EXISTS idx_todo_notification_user_id ON todo_notification(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_notify_time ON todo_notification(notify_time);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_is_sent ON todo_notification(is_sent);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_pending ON todo_notification(notify_time, is_sent) WHERE is_sent = FALSE;
+```
+
+### 15. Create UserDeviceToken Table
+```sql
+CREATE TABLE IF NOT EXISTS user_device_token (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    device_token VARCHAR(500) NOT NULL UNIQUE,
+    platform VARCHAR(20) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_user_device_token_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_user_device_token_user_id ON user_device_token(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_device_token_active ON user_device_token(user_id, is_active) WHERE is_active = TRUE;
+```
+
+### 16. Complete Todo System SQL Script
+```sql
+-- Drop existing tables (for development/testing only)
+-- DROP TABLE IF EXISTS user_device_token CASCADE;
+-- DROP TABLE IF EXISTS todo_notification CASCADE;
+-- DROP TABLE IF EXISTS todo_status_history CASCADE;
+-- DROP TABLE IF EXISTS todo_share CASCADE;
+-- DROP TABLE IF EXISTS todo_tag_pivot CASCADE;
+-- DROP TABLE IF EXISTS todo_tag CASCADE;
+-- DROP TABLE IF EXISTS todo_item CASCADE;
+-- DROP TABLE IF EXISTS todo CASCADE;
+
+-- Create todo table
+CREATE TABLE IF NOT EXISTS todo (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' 
+        CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
+    priority VARCHAR(50) NOT NULL DEFAULT 'medium'
+        CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    due_date TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    is_repeat BOOLEAN NOT NULL DEFAULT FALSE,
+    repeat_type VARCHAR(50) CHECK (repeat_type IN ('daily', 'weekly', 'monthly')),
+    mood VARCHAR(50) CHECK (mood IN ('motivated', 'lazy', 'focused', 'stressed', 'excited')),
+    user_id INTEGER NOT NULL,
+    deleted_status BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_todo_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Create todo_item table
+CREATE TABLE IF NOT EXISTS todo_item (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    is_done BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_todo_item_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE
+);
+
+-- Create todo_tag table
+CREATE TABLE IF NOT EXISTS todo_tag (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    color VARCHAR(7),
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_tag_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE,
+    CONSTRAINT uq_todo_tag_name_user UNIQUE (name, user_id)
+);
+
+-- Create todo_tag_pivot table
+CREATE TABLE IF NOT EXISTS todo_tag_pivot (
+    todo_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (todo_id, tag_id),
+    CONSTRAINT fk_todo_tag_pivot_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_tag_pivot_tag_id FOREIGN KEY (tag_id) 
+        REFERENCES todo_tag(id) ON DELETE CASCADE
+);
+
+-- Create todo_share table
+CREATE TABLE IF NOT EXISTS todo_share (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    shared_with_user_id INTEGER NOT NULL,
+    permission VARCHAR(20) NOT NULL DEFAULT 'view'
+        CHECK (permission IN ('view', 'edit')),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_share_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_share_user_id FOREIGN KEY (shared_with_user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE,
+    CONSTRAINT uq_todo_share UNIQUE (todo_id, shared_with_user_id)
+);
+
+-- Create todo_status_history table
+CREATE TABLE IF NOT EXISTS todo_status_history (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    old_status VARCHAR(50) NOT NULL,
+    new_status VARCHAR(50) NOT NULL,
+    changed_by INTEGER NOT NULL,
+    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_status_history_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_status_history_changed_by FOREIGN KEY (changed_by) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Create todo_notification table
+CREATE TABLE IF NOT EXISTS todo_notification (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    notify_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    channel VARCHAR(20) NOT NULL DEFAULT 'in_app'
+        CHECK (channel IN ('in_app', 'email', 'push')),
+    message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_todo_notification_todo_id FOREIGN KEY (todo_id) 
+        REFERENCES todo(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_notification_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Create user_device_token table
+CREATE TABLE IF NOT EXISTS user_device_token (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    device_token VARCHAR(500) NOT NULL UNIQUE,
+    platform VARCHAR(20) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_user_device_token_user_id FOREIGN KEY (user_id) 
+        REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Create all indexes
+CREATE INDEX IF NOT EXISTS idx_todo_user_id ON todo(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_status ON todo(status);
+CREATE INDEX IF NOT EXISTS idx_todo_due_date ON todo(due_date);
+CREATE INDEX IF NOT EXISTS idx_todo_priority ON todo(priority);
+CREATE INDEX IF NOT EXISTS idx_todo_user_deleted ON todo(user_id, deleted_status);
+CREATE INDEX IF NOT EXISTS idx_todo_user_status ON todo(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_todo_due_date_status ON todo(due_date, status);
+
+CREATE INDEX IF NOT EXISTS idx_todo_item_todo_id ON todo_item(todo_id);
+
+CREATE INDEX IF NOT EXISTS idx_todo_tag_user_id ON todo_tag(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_tag_name ON todo_tag(name);
+
+CREATE INDEX IF NOT EXISTS idx_todo_tag_pivot_todo_id ON todo_tag_pivot(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_tag_pivot_tag_id ON todo_tag_pivot(tag_id);
+
+CREATE INDEX IF NOT EXISTS idx_todo_share_todo_id ON todo_share(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_share_user_id ON todo_share(shared_with_user_id);
+
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_todo_id ON todo_status_history(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_changed_at ON todo_status_history(changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_new_status ON todo_status_history(new_status);
+CREATE INDEX IF NOT EXISTS idx_todo_status_history_user_completed ON todo_status_history(changed_by, new_status, changed_at);
+
+CREATE INDEX IF NOT EXISTS idx_todo_notification_user_id ON todo_notification(user_id);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_notify_time ON todo_notification(notify_time);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_is_sent ON todo_notification(is_sent);
+CREATE INDEX IF NOT EXISTS idx_todo_notification_pending ON todo_notification(notify_time, is_sent) WHERE is_sent = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_user_device_token_user_id ON user_device_token(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_device_token_active ON user_device_token(user_id, is_active) WHERE is_active = TRUE;
 ```
 
 ---
 
-## Bookmark API Endpoints
+## Streak Calculation SQL
 
-### Tag Endpoints
+### Calculate Current Streak
+```sql
+-- Streak is calculated from todo_status_history, NOT stored directly
+-- Count consecutive days with completed tasks, reset when a day has no completions
 
-#### GET /tags/
-Get all tags.
-- **Auth:** Bearer token required
-- **Response:** Array of Tag objects
+WITH completion_dates AS (
+    -- Get distinct dates when user completed todos
+    SELECT DISTINCT DATE(tsh.changed_at) as completion_date
+    FROM todo_status_history tsh
+    INNER JOIN todo t ON tsh.todo_id = t.id
+    WHERE t.user_id = :user_id 
+      AND tsh.new_status = 'completed'
+    ORDER BY completion_date DESC
+),
+date_with_gaps AS (
+    -- Assign group numbers based on date gaps
+    SELECT 
+        completion_date,
+        completion_date - (ROW_NUMBER() OVER (ORDER BY completion_date DESC))::int as grp
+    FROM completion_dates
+),
+streaks AS (
+    -- Calculate streak lengths for each group
+    SELECT 
+        grp,
+        COUNT(*) as streak_length,
+        MAX(completion_date) as streak_end,
+        MIN(completion_date) as streak_start
+    FROM date_with_gaps
+    GROUP BY grp
+),
+current_streak AS (
+    -- Current streak only counts if last completion was today or yesterday
+    SELECT 
+        CASE 
+            WHEN MAX(completion_date) >= CURRENT_DATE - 1 THEN 
+                (SELECT streak_length FROM streaks ORDER BY streak_end DESC LIMIT 1)
+            ELSE 0
+        END as current_streak
+    FROM completion_dates
+)
+SELECT 
+    (SELECT current_streak FROM current_streak) as current_streak,
+    COALESCE((SELECT MAX(streak_length) FROM streaks), 0) as longest_streak,
+    (SELECT COUNT(*) FROM todo_status_history tsh 
+     INNER JOIN todo t ON tsh.todo_id = t.id 
+     WHERE t.user_id = :user_id AND tsh.new_status = 'completed') as total_completed,
+    (SELECT MAX(completion_date) FROM completion_dates) as last_completed_date;
+```
 
-#### POST /tags/
-Create a new tag.
-- **Auth:** Bearer token required
-- **Body:** CreateTagRequest
-- **Response:** Tag object
+### Example Streak Calculation Results
+```
+Given completions on: 2025-12-11, 2025-12-10, 2025-12-09, 2025-12-07, 2025-12-06
 
-#### PUT /tags/{tag_id}
-Update a tag.
-- **Auth:** Bearer token required
-- **Body:** UpdateTagRequest
-- **Response:** Tag object
+If today is 2025-12-11:
+- current_streak: 3 (Dec 9, 10, 11)
+- longest_streak: 3
+- total_completed: 5
+- last_completed_date: 2025-12-11
 
-#### DELETE /tags/{tag_id}
-Delete a tag (hard delete).
-- **Auth:** Bearer token required
-- **Response:** `{ success: true, message: "Tag deleted" }`
-
-### Bookmark Endpoints
-
-#### GET /bookmarks/
-Get all bookmarks for the authenticated user.
-- **Auth:** Bearer token required
-- **Query params:** 
-  - `type` (optional): Filter by type
-  - `status` (optional): Filter by status
-  - `include_deleted` (optional): Include soft-deleted bookmarks
-- **Response:** Array of Bookmark objects with tags and user info
-
-#### GET /bookmarks/{bookmark_id}
-Get a single bookmark by ID.
-- **Auth:** Bearer token required
-- **Response:** Bookmark object with tags and user info
-
-#### POST /bookmarks/
-Create a new bookmark.
-- **Auth:** Bearer token required
-- **Body:** CreateBookmarkRequest
-- **Response:** Bookmark object with tags
-- **Behavior:** Sets `review_version = 1` automatically
-
-#### PUT /bookmarks/{bookmark_id}
-Update a bookmark.
-- **Auth:** Bearer token required
-- **Body:** UpdateBookmarkRequest
-- **Response:** Bookmark object with tags
-- **Behavior:** Auto-increments `review_version` by 1
-
-#### DELETE /bookmarks/{bookmark_id}
-Soft delete a bookmark.
-- **Auth:** Bearer token required
-- **Response:** `{ success: true, message: "Bookmark deleted" }`
-
-#### DELETE /bookmarks/{bookmark_id}/permanent
-Permanently delete a bookmark (hard delete).
-- **Auth:** Bearer token required
-- **Response:** `{ success: true, message: "Bookmark permanently deleted" }`
-
-#### POST /bookmarks/{bookmark_id}/cover
-Upload cover image for a bookmark.
-- **Auth:** Bearer token required
-- **Body:** multipart/form-data with `file` field
-- **Allowed types:** JPEG, PNG, GIF, WebP
-- **Response:** `{ success: true, cover_image: string, bookmark: Bookmark }`
-
-#### PATCH /bookmarks/{bookmark_id}/restore
-Restore a soft-deleted bookmark.
-- **Auth:** Bearer token required
-- **Response:** Bookmark object
-
-#### GET /bookmarks/public
-Get all public bookmarks.
-- **Auth:** Bearer token required
-- **Query params:** `type` (optional)
-- **Response:** Array of public Bookmark objects
-
-#### GET /bookmarks/tag/{tag_id}
-Get bookmarks by tag.
-- **Auth:** Bearer token required
-- **Response:** Array of Bookmark objects with the specified tag
+Note: Dec 8 has no completion, so streak resets
+```
 
 ---
 
-## Bookmark Frontend UX Flow
+## Todo API Request/Response Models
 
-### Create Bookmark Flow
-1. User clicks "Add Bookmark" button
-2. **TypeSelector** opens with blur backdrop showing 7 type cards
-3. User selects a type (Game, Movie, Novel, etc.)
-4. **BookmarkFormModal** opens with:
-   - Type pre-selected (disabled, cannot change)
-   - Collapsible sections: Basic Info, Source, Progress, Ratings, Mood, Reviews, Additional
-   - Only type-relevant fields are shown (e.g., no sound_rating for Novel)
-   - Mood multi-select with max 5 items
-   - Cover image upload with preview
-5. Submit creates bookmark with `review_version = 1`
+### CreateTodoRequest
+```json
+{
+  "title": "string (required)",
+  "description": "string (optional)",
+  "status": "string (optional, default: 'pending')",
+  "priority": "string (optional, default: 'medium')",
+  "due_date": "datetime (optional)",
+  "is_repeat": "bool (optional, default: false)",
+  "repeat_type": "string (optional, required if is_repeat=true)",
+  "mood": "string (optional)",
+  "tag_ids": "[int] (optional, list of tag IDs)"
+}
+```
 
-### Edit Bookmark Flow
-1. User clicks edit on a bookmark card
-2. **BookmarkFormModal** opens directly (no TypeSelector)
-3. Type field is disabled (cannot change type after creation)
-4. All current values pre-filled
-5. Submit auto-increments `review_version`
+### UpdateTodoRequest
+```json
+{
+  "title": "string (optional)",
+  "description": "string (optional)",
+  "status": "string (optional)",
+  "priority": "string (optional)",
+  "due_date": "datetime (optional)",
+  "is_repeat": "bool (optional)",
+  "repeat_type": "string (optional)",
+  "mood": "string (optional)",
+  "tag_ids": "[int] (optional)"
+}
+```
 
-### Detail View
-1. User clicks on bookmark card to open **BookmarkDetailDrawer**
-2. Shows:
-   - Cover image (if exists)
-   - Type and Status badges
-   - Reviewer info: "Reviewed by {firstname || username}", version number
-   - Type-filtered rating fields
-   - Mood tags (displayed as purple tags)
-   - Watch From with clickable link (if siteURL provided)
-   - Reviews and metadata
+### CreateTodoItemRequest
+```json
+{
+  "content": "string (required)"
+}
+```
 
+### UpdateTodoItemRequest
+```json
+{
+  "content": "string (optional)",
+  "is_done": "bool (optional)"
+}
+```
+
+### CreateTodoTagRequest
+```json
+{
+  "name": "string (required)",
+  "color": "string (optional, hex format)"
+}
+```
+
+### ShareTodoRequest
+```json
+{
+  "shared_with_user_id": "int (required)",
+  "permission": "string (optional, default: 'view')"
+}
+```
+
+### CreateNotificationRequest
+```json
+{
+  "todo_id": "int (required)",
+  "notify_time": "datetime (required, must be in future)",
+  "channel": "string (optional, default: 'in_app')",
+  "message": "string (optional)"
+}
+```
+
+### RegisterDeviceTokenRequest
+```json
+{
+  "device_token": "string (required)",
+  "platform": "string (required, 'ios'|'android'|'web')"
+}
+```
+
+### StreakSummary Response
+```json
+{
+  "current_streak": "int",
+  "longest_streak": "int",
+  "total_completed": "int",
+  "last_completed_date": "datetime | null"
+}
+```
+
+### TodoAnalytics Response
+```json
+{
+  "total_todos": "int",
+  "completed_todos": "int",
+  "pending_todos": "int",
+  "in_progress_todos": "int",
+  "cancelled_todos": "int",
+  "completion_rate": "float (percentage)",
+  "streak": "StreakSummary"
+}
+```
+
+---
+
+
+## Redis Queue System
+
+### Overview
+The notification system uses Redis sorted sets for delayed job processing.
+
+### Queue Names
+- `axionsync:notifications:scheduled` - Jobs waiting to be executed
+- `axionsync:notifications:processing` - Jobs currently being processed
+- `axionsync:notifications:dead_letter` - Failed jobs after max retries
+
+### Job Payload Structure
+```json
+{
+  "notification_id": 123,
+  "todo_id": 456,
+  "user_id": 789,
+  "channel": "push",
+  "message": "Don't forget your todo!",
+  "scheduled_at": "2025-12-11T10:00:00Z",
+  "retry_count": 0,
+  "max_retries": 3,
+  "created_at": "2025-12-11T09:00:00Z"
+}
+```
+
+### Job Lifecycle
+1. **Schedule**: When notification created, job added to `scheduled` queue with score = execute_at timestamp
+2. **Pickup**: Worker polls for jobs with score <= current time
+3. **Process**: Job moved to `processing` queue
+4. **Complete**: On success, job removed from all queues, notification marked as sent
+5. **Retry**: On failure, retry_count incremented, job rescheduled with exponential backoff
+6. **Dead Letter**: After max_retries, job moved to `dead_letter` queue
+
+### Running the Worker
+```bash
+# Start notification worker
+python -m src.workers.notification_worker
+
+# With custom settings
+WORKER_POLL_INTERVAL=5 WORKER_BATCH_SIZE=50 python -m src.workers.notification_worker
+```
+
+### Worker Features
+- Graceful shutdown on SIGINT/SIGTERM
+- Exponential backoff for retries (delay * 2^retry_count)
+- Dead letter queue for failed jobs
+- Health monitoring via `redis_queue.health_check()`
+- Support for in_app, email, and push channels
+
+---
+
+## Sample Todo Data
+
+```sql
+-- Create sample todos for user_id = 1
+INSERT INTO todo (title, description, status, priority, due_date, is_repeat, mood, user_id)
+VALUES 
+    ('Complete project documentation', 'Write API docs and deployment guide', 'in_progress', 'high', NOW() + INTERVAL '2 days', FALSE, 'focused', 1),
+    ('Review pull requests', 'Check pending PRs from team', 'pending', 'medium', NOW() + INTERVAL '1 day', FALSE, 'motivated', 1),
+    ('Daily standup meeting', 'Attend daily standup with team', 'pending', 'medium', NOW() + INTERVAL '6 hours', TRUE, NULL, 1),
+    ('Fix login bug', 'Users getting 401 on mobile app', 'completed', 'urgent', NOW() - INTERVAL '1 day', FALSE, 'excited', 1)
+RETURNING id;
+-- Assume todo ids 1,2,3,4
+
+-- Update todo 4 with completed_at
+UPDATE todo SET completed_at = NOW() - INTERVAL '1 day' WHERE id = 4;
+
+-- Create checklist items
+INSERT INTO todo_item (todo_id, content, is_done)
+VALUES
+    (1, 'Write introduction section', TRUE),
+    (1, 'Document API endpoints', TRUE),
+    (1, 'Add code examples', FALSE),
+    (1, 'Create deployment guide', FALSE),
+    (2, 'Review frontend PR #123', FALSE),
+    (2, 'Review backend PR #456', FALSE);
+
+-- Create tags
+INSERT INTO todo_tag (name, color, user_id)
+VALUES
+    ('Work', '#3B82F6', 1),
+    ('Personal', '#22C55E', 1),
+    ('Urgent', '#EF4444', 1),
+    ('Meeting', '#8B5CF6', 1)
+RETURNING id;
+-- Assume tag ids 1,2,3,4
+
+-- Assign tags to todos
+INSERT INTO todo_tag_pivot (todo_id, tag_id)
+VALUES
+    (1, 1), -- Documentation: Work
+    (2, 1), -- PRs: Work
+    (3, 1), -- Standup: Work
+    (3, 4), -- Standup: Meeting
+    (4, 1), -- Bug fix: Work
+    (4, 3); -- Bug fix: Urgent
+
+-- Create status history
+INSERT INTO todo_status_history (todo_id, old_status, new_status, changed_by, changed_at)
+VALUES
+    (1, '', 'pending', 1, NOW() - INTERVAL '3 days'),
+    (1, 'pending', 'in_progress', 1, NOW() - INTERVAL '2 days'),
+    (4, '', 'pending', 1, NOW() - INTERVAL '2 days'),
+    (4, 'pending', 'in_progress', 1, NOW() - INTERVAL '1 day'),
+    (4, 'in_progress', 'completed', 1, NOW() - INTERVAL '1 day');
+
+-- Share todo 1 with user 2 (assuming user 2 exists)
+-- INSERT INTO todo_share (todo_id, shared_with_user_id, permission)
+-- VALUES (1, 2, 'edit');
+
+-- Create notification for todo 3 (standup meeting)
+INSERT INTO todo_notification (todo_id, user_id, notify_time, channel, message)
+VALUES
+    (3, 1, NOW() + INTERVAL '5 hours 50 minutes', 'push', 'Standup meeting in 10 minutes!'),
+    (1, 1, NOW() + INTERVAL '1 day 23 hours', 'in_app', 'Documentation deadline tomorrow');
+```
+
+### Quick Sample Data for Any User
+```sql
+-- Replace :user_id with actual user ID (e.g., 1, 2, 3, etc.)
+-- This script creates basic todo data for testing
+
+-- Create sample tags
+INSERT INTO todo_tag (name, color, user_id, created_at)
+VALUES 
+    ('Work', '#3b82f6', :user_id, NOW()),
+    ('Personal', '#10b981', :user_id, NOW()),
+    ('Urgent', '#ef4444', :user_id, NOW())
+ON CONFLICT (user_id, name) DO NOTHING;
+
+-- Create sample todos
+INSERT INTO todo (title, description, status, priority, due_date, user_id, deleted_status, created_at)
+VALUES 
+    ('Complete project documentation', 'Write comprehensive docs for the new feature', 'in_progress', 'high', NOW() + INTERVAL '2 days', :user_id, FALSE, NOW()),
+    ('Review pull requests', 'Review team PRs before EOD', 'pending', 'medium', NOW() + INTERVAL '1 day', :user_id, FALSE, NOW()),
+    ('Fix critical bug', 'Address the production issue ASAP', 'pending', 'urgent', NOW() + INTERVAL '3 hours', :user_id, FALSE, NOW())
+RETURNING id;
+-- Note the returned todo IDs to use below
+
+-- Create checklist items (replace 1 with actual first todo ID)
+INSERT INTO todo_item (todo_id, content, is_done, created_at)
+VALUES 
+    (1, 'Write API documentation', FALSE, NOW()),
+    (1, 'Add code examples', FALSE, NOW()),
+    (1, 'Review and publish', FALSE, NOW());
+```
+
+**Python Script to Create Sample Data:**
+```bash
+# Run this from AxionSync_Backend directory
+python migrations/create_all_sample_data.py
+```
+
+---
+
+## Todo Frontend Integration Notes
+
+### Access Control
+- **Owner**: Full access to all operations
+- **Edit Permission**: Can modify todo, items, tags, mood; cannot delete todo or manage shares
+- **View Permission**: Read-only access to todo and its items
+
+### Real-time Updates (Suggested)
+For real-time collaboration on shared todos, consider:
+- WebSocket connections for live updates
+- Optimistic UI updates with server reconciliation
+- Conflict resolution for concurrent edits
+
+### Notification Channels
+- **in_app**: Display in notification center within the app
+- **email**: Send email to user's registered email (requires email field in user table)
+- **push**: Send push notification to registered devices
+
+### Streak Display
+- Show current streak prominently on dashboard
+- Display streak reset warning if user hasn't completed todo today
+- Celebrate milestone streaks (7 days, 30 days, etc.)

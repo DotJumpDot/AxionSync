@@ -10,7 +10,7 @@ import {
   getTypeColor,
   formatRating,
   formatTimeUsed,
-} from "@/Functions/Bookmark/bookmark_helpers";
+} from "@/Functions/Bookmark/";
 
 type BookmarkDetailDrawerProps = {
   open: boolean;

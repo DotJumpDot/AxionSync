@@ -1,0 +1,204 @@
+{
+  "title": "Todos",
+  "myTodos": "My Todos",
+  "sharedTodos": "Shared with Me",
+  "addTodo": "Add Todo",
+  "editTodo": "Edit Todo",
+  "deleteTodo": "Delete Todo",
+  "permanentDelete": "Permanent Delete",
+  "restore": "Restore",
+  "noTodos": "No todos yet",
+  "noTodosDescription": "Start adding tasks to stay organized!",
+  "cancel": "Cancel",
+  "save": "Save",
+  "create": "Create",
+  "back": "Back",
+  "markComplete": "Mark Complete",
+  "markIncomplete": "Mark Incomplete",
+
+  "todoTitle": "Title",
+  "description": "Description",
+  "descriptionPlaceholder": "Add a description...",
+  "dueDate": "Due Date",
+  "dueDatePlaceholder": "Select due date",
+  "priority": "Priority",
+  "status": "Status",
+  "mood": "Mood",
+  "moodDescription": "How are you feeling about this task?",
+  "tags": "Tags",
+  "checklist": "Checklist",
+  "addItem": "Add item",
+  "itemPlaceholder": "What needs to be done?",
+  "repeat": "Repeat",
+  "repeatType": "Repeat Frequency",
+  "share": "Share",
+  "shareWith": "Share with",
+  "permission": "Permission",
+
+  "sections": {
+    "basicInfo": "Basic Information",
+    "details": "Details",
+    "checklist": "Checklist",
+    "sharing": "Sharing",
+    "analytics": "Analytics"
+  },
+
+  "statuses": {
+    "pending": "Pending",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+
+  "priorities": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+
+  "repeatTypes": {
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+
+  "moods": {
+    "motivated": "Motivated",
+    "lazy": "Lazy",
+    "focused": "Focused",
+    "stressed": "Stressed",
+    "excited": "Excited"
+  },
+
+  "permissions": {
+    "view": "View Only",
+    "edit": "Can Edit"
+  },
+
+  "filters": {
+    "all": "All",
+    "active": "Active",
+    "completed": "Completed",
+    "deleted": "Deleted",
+    "byStatus": "By Status",
+    "byPriority": "By Priority",
+    "byTag": "By Tag",
+    "dueToday": "Due Today",
+    "overdue": "Overdue",
+    "noDueDate": "No Due Date"
+  },
+
+  "sort": {
+    "created": "Created Date",
+    "dueDate": "Due Date",
+    "priority": "Priority",
+    "title": "Title",
+    "status": "Status"
+  },
+
+  "analytics": {
+    "title": "Analytics",
+    "totalTodos": "Total Todos",
+    "completed": "Completed",
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "cancelled": "Cancelled",
+    "completionRate": "Completion Rate",
+    "streak": "Streak",
+    "currentStreak": "Current Streak",
+    "longestStreak": "Longest Streak",
+    "totalCompleted": "Total Completed",
+    "lastCompleted": "Last Completed",
+    "days": "days"
+  },
+
+  "notifications": {
+    "title": "Notifications",
+    "upcoming": "Upcoming",
+    "addReminder": "Add Reminder",
+    "editReminder": "Edit Reminder",
+    "deleteReminder": "Delete Reminder",
+    "noReminders": "No reminders set",
+    "notifyTime": "Notify At",
+    "channel": "Channel",
+    "message": "Message",
+    "messagePlaceholder": "Optional custom message...",
+    "channels": {
+      "in_app": "In-App",
+      "email": "Email",
+      "push": "Push Notification"
+    },
+    "hoursUntil": "{hours} hours until",
+    "minutesUntil": "{minutes} minutes until",
+    "markAllRead": "Mark All Read",
+    "unreadCount": "{count} unread"
+  },
+
+  "sharing": {
+    "sharedBy": "Shared by {username}",
+    "sharedWith": "Shared with",
+    "noShares": "Not shared with anyone",
+    "addShare": "Share Todo",
+    "removeShare": "Remove",
+    "updatePermission": "Update Permission"
+  },
+
+  "messages": {
+    "todoCreated": "Todo created successfully",
+    "todoUpdated": "Todo updated successfully",
+    "todoDeleted": "Todo moved to trash",
+    "todoPermanentDeleted": "Todo permanently deleted",
+    "todoRestored": "Todo restored successfully",
+    "itemAdded": "Checklist item added",
+    "itemUpdated": "Checklist item updated",
+    "itemDeleted": "Checklist item deleted",
+    "tagAdded": "Tag added",
+    "tagRemoved": "Tag removed",
+    "shareAdded": "Todo shared successfully",
+    "shareRemoved": "Share removed",
+    "permissionUpdated": "Permission updated",
+    "reminderSet": "Reminder set successfully",
+    "reminderDeleted": "Reminder deleted",
+    "statusChangedPrefix": "Status changed to",
+    "priorityChanged": "Priority changed to {priority}",
+    "moodSet": "Mood set to {mood}"
+  },
+
+  "errors": {
+    "failedCreate": "Failed to create todo",
+    "failedUpdate": "Failed to update todo",
+    "failedDelete": "Failed to delete todo",
+    "failedRestore": "Failed to restore todo",
+    "failedShare": "Failed to share todo",
+    "failedSetReminder": "Failed to set reminder",
+    "titleRequired": "Title is required",
+    "invalidDueDate": "Invalid due date"
+  },
+
+  "empty": {
+    "noTodosTitle": "No Tasks Yet",
+    "noTodosMessage": "Create your first todo to get started!",
+    "noSharedTitle": "No Shared Todos",
+    "noSharedMessage": "Todos shared with you will appear here",
+    "noCompletedTitle": "No Completed Tasks",
+    "noCompletedMessage": "Complete some tasks to see them here",
+    "noOverdueTitle": "All Caught Up!",
+    "noOverdueMessage": "You have no overdue tasks"
+  },
+
+  "confirmDelete": {
+    "title": "Delete Todo?",
+    "message": "This will move the todo to trash. You can restore it later.",
+    "permanentTitle": "Permanently Delete?",
+    "permanentMessage": "This action cannot be undone. The todo will be permanently deleted."
+  },
+
+  "dueDateLabels": {
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "overdue": "Overdue",
+    "dueIn": "Due in {days} days",
+    "noDue": "No due date"
+  }
+}

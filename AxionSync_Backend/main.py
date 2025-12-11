@@ -9,6 +9,8 @@ from src.api.api_memo import router as api_memo
 from src.api.api_tab import router as api_tab
 from src.api.api_bookmark import router as api_bookmark
 from src.api.api_tag import router as api_tag
+from src.api.api_todo import router as api_todo
+from src.api.api_notification import router as api_notification
 
 from dotenv import load_dotenv
 import os
@@ -45,6 +47,8 @@ app.include_router(api_memo)
 app.include_router(api_tab)
 app.include_router(api_bookmark)
 app.include_router(api_tag)
+app.include_router(api_todo)
+app.include_router(api_notification)
 
 
 ####################################################################################
@@ -260,4 +264,4 @@ def custom_swagger_ui():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=80, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

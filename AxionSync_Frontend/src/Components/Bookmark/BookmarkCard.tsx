@@ -6,7 +6,7 @@ import {
   getStatusColor,
   getTypeColor,
   formatRating,
-} from "@/Functions/Bookmark/bookmark_helpers";
+} from "@/Functions/Bookmark";
 import { Image } from "antd";
 
 type BookmarkCardProps = {

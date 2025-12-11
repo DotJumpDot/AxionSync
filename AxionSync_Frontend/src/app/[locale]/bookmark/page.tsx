@@ -18,13 +18,13 @@ import {
   filterBookmarks,
   sortBookmarks,
   searchBookmarks,
-} from "@/Functions/Bookmark/bookmark_helpers";
+} from "@/Functions/Bookmark/";
 import {
   handleBookmarkDelete,
   handleBookmarkPermanentDelete,
   handleBookmarkRestore,
   handleCoverImageUpload,
-} from "@/Functions/Bookmark/bookmark_handlers";
+} from "@/Functions/Bookmark/bookmark_function_handlers";
 import useShowDeleteConfirm from "@/Components/Modal/DeleteConfirmModal";
 import type {
   Bookmark,

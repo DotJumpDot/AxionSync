@@ -169,7 +169,7 @@ export default function Sidebar() {
                 let targetPath = "";
                 if (item.label === "Main Menu")
                   targetPath = `/${locale}/mainmenu`;
-                if (item.label === "Todo") targetPath = `/${locale}/mainmenu`;
+                if (item.label === "Todo") targetPath = `/${locale}/todo`;
                 if (item.label === "Memo") targetPath = `/${locale}/memo`;
                 if (item.label === "Bookmark")
                   targetPath = `/${locale}/bookmark`;

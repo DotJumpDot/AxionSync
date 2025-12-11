@@ -1,0 +1,204 @@
+{
+  "title": "รายการสิ่งที่ต้องทำ",
+  "myTodos": "รายการของฉัน",
+  "sharedTodos": "แชร์กับฉัน",
+  "addTodo": "เพิ่มรายการ",
+  "editTodo": "แก้ไขรายการ",
+  "deleteTodo": "ลบรายการ",
+  "permanentDelete": "ลบถาวร",
+  "restore": "กู้คืน",
+  "noTodos": "ยังไม่มีรายการ",
+  "noTodosDescription": "เริ่มเพิ่มงานเพื่อจัดระเบียบชีวิต!",
+  "cancel": "ยกเลิก",
+  "save": "บันทึก",
+  "create": "สร้าง",
+  "back": "ย้อนกลับ",
+  "markComplete": "ทำเครื่องหมายว่าเสร็จ",
+  "markIncomplete": "ทำเครื่องหมายว่ายังไม่เสร็จ",
+
+  "todoTitle": "หัวข้อ",
+  "description": "รายละเอียด",
+  "descriptionPlaceholder": "เพิ่มรายละเอียด...",
+  "dueDate": "วันครบกำหนด",
+  "dueDatePlaceholder": "เลือกวันครบกำหนด",
+  "priority": "ความสำคัญ",
+  "status": "สถานะ",
+  "mood": "อารมณ์",
+  "moodDescription": "รู้สึกอย่างไรกับงานนี้?",
+  "tags": "แท็ก",
+  "checklist": "รายการย่อย",
+  "addItem": "เพิ่มรายการย่อย",
+  "itemPlaceholder": "ต้องทำอะไร?",
+  "repeat": "ทำซ้ำ",
+  "repeatType": "ความถี่ในการทำซ้ำ",
+  "share": "แชร์",
+  "shareWith": "แชร์กับ",
+  "permission": "สิทธิ์",
+
+  "sections": {
+    "basicInfo": "ข้อมูลพื้นฐาน",
+    "details": "รายละเอียด",
+    "checklist": "รายการย่อย",
+    "sharing": "การแชร์",
+    "analytics": "สถิติ"
+  },
+
+  "statuses": {
+    "pending": "รอดำเนินการ",
+    "in_progress": "กำลังทำ",
+    "completed": "เสร็จสิ้น",
+    "cancelled": "ยกเลิก"
+  },
+
+  "priorities": {
+    "low": "ต่ำ",
+    "medium": "ปานกลาง",
+    "high": "สูง",
+    "urgent": "เร่งด่วน"
+  },
+
+  "repeatTypes": {
+    "daily": "ทุกวัน",
+    "weekly": "ทุกสัปดาห์",
+    "monthly": "ทุกเดือน"
+  },
+
+  "moods": {
+    "motivated": "มีแรงบันดาลใจ",
+    "lazy": "ขี้เกียจ",
+    "focused": "มีสมาธิ",
+    "stressed": "เครียด",
+    "excited": "ตื่นเต้น"
+  },
+
+  "permissions": {
+    "view": "ดูอย่างเดียว",
+    "edit": "แก้ไขได้"
+  },
+
+  "filters": {
+    "all": "ทั้งหมด",
+    "active": "ที่ยังทำอยู่",
+    "completed": "ที่เสร็จแล้ว",
+    "deleted": "ที่ลบแล้ว",
+    "byStatus": "ตามสถานะ",
+    "byPriority": "ตามความสำคัญ",
+    "byTag": "ตามแท็ก",
+    "dueToday": "ครบกำหนดวันนี้",
+    "overdue": "เลยกำหนด",
+    "noDueDate": "ไม่มีกำหนด"
+  },
+
+  "sort": {
+    "created": "วันที่สร้าง",
+    "dueDate": "วันครบกำหนด",
+    "priority": "ความสำคัญ",
+    "title": "หัวข้อ",
+    "status": "สถานะ"
+  },
+
+  "analytics": {
+    "title": "สถิติ",
+    "totalTodos": "รายการทั้งหมด",
+    "completed": "เสร็จสิ้น",
+    "pending": "รอดำเนินการ",
+    "inProgress": "กำลังทำ",
+    "cancelled": "ยกเลิก",
+    "completionRate": "อัตราความสำเร็จ",
+    "streak": "สตรีค",
+    "currentStreak": "สตรีคปัจจุบัน",
+    "longestStreak": "สตรีคยาวที่สุด",
+    "totalCompleted": "เสร็จทั้งหมด",
+    "lastCompleted": "เสร็จล่าสุด",
+    "days": "วัน"
+  },
+
+  "notifications": {
+    "title": "การแจ้งเตือน",
+    "upcoming": "ที่จะมาถึง",
+    "addReminder": "เพิ่มการเตือน",
+    "editReminder": "แก้ไขการเตือน",
+    "deleteReminder": "ลบการเตือน",
+    "noReminders": "ยังไม่มีการเตือน",
+    "notifyTime": "เวลาแจ้งเตือน",
+    "channel": "ช่องทาง",
+    "message": "ข้อความ",
+    "messagePlaceholder": "ข้อความกำหนดเอง (ไม่บังคับ)...",
+    "channels": {
+      "in_app": "ในแอป",
+      "email": "อีเมล",
+      "push": "แจ้งเตือนพุช"
+    },
+    "hoursUntil": "อีก {hours} ชั่วโมง",
+    "minutesUntil": "อีก {minutes} นาที",
+    "markAllRead": "อ่านทั้งหมด",
+    "unreadCount": "{count} ยังไม่ได้อ่าน"
+  },
+
+  "sharing": {
+    "sharedBy": "แชร์โดย {username}",
+    "sharedWith": "แชร์กับ",
+    "noShares": "ยังไม่ได้แชร์กับใคร",
+    "addShare": "แชร์รายการ",
+    "removeShare": "ลบการแชร์",
+    "updatePermission": "อัปเดตสิทธิ์"
+  },
+
+  "messages": {
+    "todoCreated": "สร้างรายการสำเร็จ",
+    "todoUpdated": "อัปเดตรายการสำเร็จ",
+    "todoDeleted": "ย้ายรายการไปถังขยะแล้ว",
+    "todoPermanentDeleted": "ลบรายการถาวรแล้ว",
+    "todoRestored": "กู้คืนรายการสำเร็จ",
+    "itemAdded": "เพิ่มรายการย่อยแล้ว",
+    "itemUpdated": "อัปเดตรายการย่อยแล้ว",
+    "itemDeleted": "ลบรายการย่อยแล้ว",
+    "tagAdded": "เพิ่มแท็กแล้ว",
+    "tagRemoved": "ลบแท็กแล้ว",
+    "shareAdded": "แชร์รายการสำเร็จ",
+    "shareRemoved": "ลบการแชร์แล้ว",
+    "permissionUpdated": "อัปเดตสิทธิ์แล้ว",
+    "reminderSet": "ตั้งการเตือนสำเร็จ",
+    "reminderDeleted": "ลบการเตือนแล้ว",
+    "statusChangedPrefix": "เปลี่ยนสถานะเป็น",
+    "priorityChanged": "เปลี่ยนความสำคัญเป็น {priority}",
+    "moodSet": "ตั้งอารมณ์เป็น {mood}"
+  },
+
+  "errors": {
+    "failedCreate": "ไม่สามารถสร้างรายการได้",
+    "failedUpdate": "ไม่สามารถอัปเดตรายการได้",
+    "failedDelete": "ไม่สามารถลบรายการได้",
+    "failedRestore": "ไม่สามารถกู้คืนรายการได้",
+    "failedShare": "ไม่สามารถแชร์รายการได้",
+    "failedSetReminder": "ไม่สามารถตั้งการเตือนได้",
+    "titleRequired": "กรุณาใส่หัวข้อ",
+    "invalidDueDate": "วันครบกำหนดไม่ถูกต้อง"
+  },
+
+  "empty": {
+    "noTodosTitle": "ยังไม่มีงาน",
+    "noTodosMessage": "สร้างรายการแรกเพื่อเริ่มต้น!",
+    "noSharedTitle": "ไม่มีรายการที่แชร์",
+    "noSharedMessage": "รายการที่แชร์กับคุณจะแสดงที่นี่",
+    "noCompletedTitle": "ไม่มีงานที่เสร็จ",
+    "noCompletedMessage": "ทำงานให้เสร็จเพื่อดูที่นี่",
+    "noOverdueTitle": "ยอดเยี่ยม!",
+    "noOverdueMessage": "คุณไม่มีงานที่เลยกำหนด"
+  },
+
+  "confirmDelete": {
+    "title": "ลบรายการ?",
+    "message": "รายการจะถูกย้ายไปถังขยะ คุณสามารถกู้คืนได้ภายหลัง",
+    "permanentTitle": "ลบถาวร?",
+    "permanentMessage": "การกระทำนี้ไม่สามารถยกเลิกได้ รายการจะถูกลบถาวร"
+  },
+
+  "dueDateLabels": {
+    "today": "วันนี้",
+    "tomorrow": "พรุ่งนี้",
+    "overdue": "เลยกำหนด",
+    "dueIn": "อีก {days} วัน",
+    "noDue": "ไม่มีกำหนด"
+  }
+}
